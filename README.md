@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This application is a comprehensive trading analysis toolkit designed to assist users in analyzing financial markets and making informed trading decisions. It features a technical indicators module (`indicators.py`), a trading signals module, a backtesting module, a data acquisition system, and a web-based user interface. The application provides tools for calculating commonly used technical indicators, generating trading signals, backtesting strategies, and interacting with data through a web interface.
+This application is a comprehensive trading analysis toolkit designed to assist users in analyzing financial markets and making informed trading decisions. It features a technical indicators module (`indicators.py`), a trading signals module, and a data acquisition system. The application provides tools for calculating commonly used technical indicators, generating trading signals, backtesting strategies, and interacting with data through the the exchange APIs.
 
 ## Features
 
@@ -26,37 +26,7 @@ This module includes implementations of the following technical indicators:
 5. **Stochastic RSI**: A momentum oscillator that combines RSI with the stochastic oscillator formula to provide more sensitivity in price movements.
    - **Function**: `stochastic_rsi(data, window=14)`
 
-### 2. Trading Signals Module (`signals.py`)
-This module provides functionality to generate trading signals based on the calculated indicators. Signals can be used to identify buy or sell opportunities based on indicator thresholds and crossover events.
 
-- **Features**:
-  - Buy/Sell signal generation for MACD crossovers.
-  - Overbought/Oversold conditions from RSI to indicate possible reversal points.
-  - Customizable signal strategies using combinations of multiple indicators.
-
-### 3. Backtesting Module (`backtest.py`)
-This module allows users to backtest trading strategies on historical data. It calculates performance metrics, including returns, risk metrics, and visualizes trading activity on historical price charts.
-
-- **Features**:
-  - Historical performance evaluation.
-  - Custom strategy definition and testing.
-  - Visualization of trades, returns, and drawdowns.
-
-### 4. Data Acquisition (`data_fetcher.py`)
-This component is responsible for fetching market data from various sources. It supports multiple data providers, including APIs and CSV files.
-
-- **Features**:
-  - Fetching historical price data for stocks, cryptocurrencies, and other assets.
-  - Integration with popular data providers like Alpha Vantage, Yahoo Finance, and Binance.
-
-### 5. Web Interface (`web_app/`)
-A simple web-based interface for users to interact with the application. It allows for:
-
-- Uploading datasets.
-- Configuring technical indicators and backtesting parameters.
-- Viewing backtest results and generated signals.
-
-The web application is built using FastAPI and Jinja2 templates for a lightweight, user-friendly experience.
 
 ## Installation
 
@@ -78,41 +48,14 @@ The primary dependencies for this application include:
 
 Here is an example of how to use the indicators provided by the module:
 
-```python
-import pandas as pd
-import indicators
 
-# Sample price data
-data = pd.Series([100, 102, 101, 105, 110, 108, 112, 115, 113, 117])
-
-# Moving Average
-ma = indicators.moving_average(data, window_size=3)
-print(ma)
-
-# MACD
-macd_line, signal_line, histogram = indicators.macd(data)
-print(macd_line, signal_line, histogram)
-
-# RSI
-rsi_values = indicators.rsi(data)
-print(rsi_values)
-
-# Bollinger Bands
-upper_band, lower_band = indicators.bollinger_bands(data)
-print(upper_band, lower_band)
-
-# Stochastic RSI
-stoch_rsi_values = indicators.stochastic_rsi(data)
-print(stoch_rsi_values)
-```
-
-To run the entire trading application, including backtesting and the web interface, execute:
+To run the entire trading application, execute:
 
 ```sh
-python main.py
+python3 main.py
 ```
 
-This will start the web server, allowing you to access the web interface for interacting with the trading toolkit.
+This will start the app, allowing you to start trading.
 
 ## Description of Indicators
 
@@ -138,7 +81,6 @@ This project is licensed under the MIT License. See the `LICENSE` file for more 
 Contributions are welcome! If you find a bug or have an idea for an improvement, feel free to create an issue or sub
 
 
-# Install Libraries
 
 # Kraken Rest API with Enhanced Trading Strategy and Portfolio Allocation
 #
