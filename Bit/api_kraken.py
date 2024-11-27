@@ -1,0 +1,93 @@
+import requests
+import time
+import base64
+import hashlib
+import hmac
+import json
+from typing import Optional, List, Dict
+from config import API_KEY, API_SECRET, API_DOMAIN
+from logger_config import logger
+from tenacity import retry, wait_exponential, stop_after_attempt
+
+class KrakenAPI:
+    def __init__(self, api_key: str, api_secret: str, api_domain: str):
+        self.api_key = api_key
+        self.api_secret = base64.b64decode(api_secret)
+        self.api_domain = api_domain
+
+    def _sign_request(self, api_path: str, api_nonce: str, api_postdata: str) -> str:
+        api_sha256 = hashlib.sha256(api_nonce.encode('utf-8') + api_postdata.encode('utf-8')).digest()
+        api_hmacsha512 = hmac.new(self.api_secret, api_path.encode('utf-8') + api_sha256, hashlib.sha512)
+        return base64.b64encode(api_hmacsha512.digest()).decode()
+
+    @retry(wait=wait_exponential(min=1, max=10), stop=stop_after_attempt(5))
+    def _make_request(self, method: str, path: str, data: Optional[Dict] = None, is_private: bool = False) -> Optional[Dict]:
+        url = f"{self.api_domain}{path}{method}"
+        headers = {"User-Agent": "Kraken REST API"}
+        post_data = ""
+
+        if data:
+            post_data = "&".join([f"{key}={value}" for key, value in data.items()])
+
+        if is_private:
+            nonce = str(int(time.time() * 1000))
+            post_data += f"&nonce={nonce}"
+            headers["API-Key"] = self.api_key
+            headers["API-Sign"] = self._sign_request(path + method, nonce, post_data)
+
+        try:
+            response = requests.post(url, headers=headers, data=post_data) if is_private else requests.get(url, headers=headers, params=data)
+            response.raise_for_status()
+            api_reply = response.json()
+            if 'error' in api_reply and len(api_reply['error']) > 0:
+                logger.error(f"API error: {api_reply['error']}")
+                return None
+            return api_reply.get('result', None)
+        except requests.RequestException as error:
+            logger.error(f"API call failed ({error})")
+            return None
+
+    def get_btc_price(self) -> Optional[float]:
+        result = self._make_request(method="Ticker", path="/0/public/", data={"pair": "XXBTZUSD"})
+        if result:
+            return float(result['XXBTZUSD']['c'][0])
+        return None
+
+    def get_historical_prices(self, pair: str = "XXBTZUSD", interval: int = 60, since: Optional[int] = None) -> List[float]:
+        data = {"pair": pair, "interval": interval}
+        if since:
+            data["since"] = since
+        result = self._make_request(method="OHLC", path="/0/public/", data=data)
+        if result:
+            return [float(entry[4]) for entry in result.get(pair, [])]
+        return []
+
+    def execute_trade(self, volume: float, side: str, price: Optional[float] = None) -> None:
+        data = {
+            "pair": "XXBTZUSD",
+            "type": side,
+            "ordertype": "limit" if price else "market",
+            "volume": volume,
+        }
+        if price:
+            data["price"] = price
+        result = self._make_request(method="AddOrder", path="/0/private/", data=data, is_private=True)
+        if result:
+            logger.info(f"Executed {side} order for {volume} BTC at {price or 'market price'}. Order response: {result}")
+
+    def get_account_balance(self) -> Optional[Dict[str, float]]:
+        result = self._make_request(method="Balance", path="/0/private/", is_private=True)
+        return result
+
+    def get_open_orders(self) -> Optional[Dict]:
+        result = self._make_request(method="OpenOrders", path="/0/private/", is_private=True)
+        return result.get('open', None) if result else None
+
+# Initialize the API client
+kraken_api = KrakenAPI(API_KEY, API_SECRET, API_DOMAIN)
+
+# Example usage
+if __name__ == "__main__":
+    btc_price = kraken_api.get_btc_price()
+    if btc_price:
+        logger.info(f"Current BTC price: {btc_price}")
