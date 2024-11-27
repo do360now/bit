@@ -84,10 +84,10 @@ Contributions are welcome! If you find a bug or have an idea for an improvement,
 
 # Kraken Rest API with Enhanced Trading Strategy and Portfolio Allocation
 #
-# Usage: ./krakenapi endpoint [parameters]
-# Example: ./krakenapi Time
-# Example: ./krakenapi OHLC pair=xbtusd interval=1440
-# Example: ./krakenapi Balance
-# Example: ./krakenapi TradeBalance asset=xdg
-# Example: ./krakenapi OpenPositions
-# Example: ./krakenapi AddOrder pair=xxbtzusd type=buy ordertype=market volume=0.003 leverage=5
+- Usage: ./krakenapi endpoint [parameters]
+- Example: ./krakenapi Time
+- Example: ./krakenapi OHLC pair=xbtusd interval=1440
+- Example: ./krakenapi Balance
+- Example: ./krakenapi TradeBalance asset=xdg
+- Example: ./krakenapi OpenPositions
+- Example: ./krakenapi AddOrder pair=xxbtzusd type=buy ordertype=market volume=0.003 leverage=5
