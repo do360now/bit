@@ -12,6 +12,7 @@ from indicators import (
 from portfolio import portfolio
 from config import MIN_TRADE_VOLUME, API_KEY, API_SECRET, API_DOMAIN
 from logger_config import logger
+from termcolor import colored
 
 class AdvancedTradingStrategy:
     def __init__(self, prices: Optional[List[float]] = None, risk_tolerance: float = 0.02):
@@ -131,24 +132,24 @@ class AdvancedTradingStrategy:
 
             # Stop loss check
             if potential_profit_loss <= -thresholds['stop_loss_percent'] * 100:
-                logger.info(f"Stop loss triggered: Current Price={current_price}, Last Trade Price={self.last_trade_price}")
+                logger.info(colored(f"Stop loss triggered: Current Price={current_price}, Last Trade Price={self.last_trade_price}", "red"))
                 self._execute_sell(current_price, "Stop Loss Triggered")
                 return
 
             # Take profit check
             if potential_profit_loss >= thresholds['take_profit_percent'] * 100:
-                logger.info(f"Take profit triggered: Current Price={current_price}, Last Trade Price={self.last_trade_price}")
+                logger.info(colored(f"Take profit triggered: Current Price={current_price}, Last Trade Price={self.last_trade_price}", "green"))
                 self._execute_sell(current_price, "Take Profit Triggered")
                 return
 
         if not self.last_trade_price:
-            logger.info(f"No trade executed. Conditions not met: MACD ({macd}) > Signal ({signal}), RSI ({rsi}) within thresholds.")
+            logger.info(colored(f"No trade executed. Conditions not met: MACD ({macd}) > Signal ({signal}), RSI ({rsi}) within thresholds.", "yellow"))
 
         # Calculate moving average
         moving_avg = calculate_moving_average(self.prices)
         logger.info(f"Moving Average: {moving_avg}")
         if moving_avg is None:
-            logger.error("Moving average calculation failed due to insufficient data.")
+            logger.error(colored("Moving average calculation failed due to insufficient data."), "red")
             return
         macd = float(macd)
         signal = float(signal)
@@ -159,21 +160,21 @@ class AdvancedTradingStrategy:
         if (macd > signal and 
             rsi < thresholds['buy_rsi_threshold'] and 
             current_price > moving_avg):
-            logger.info(f"Buy conditions met: MACD ({macd}) > Signal ({signal}), RSI ({rsi}) < Buy Threshold ({thresholds['buy_rsi_threshold']}), Current Price ({current_price}) > Moving Average ({moving_avg})")
+            logger.info(colored(f"Buy conditions met: MACD ({macd}) > Signal ({signal}), RSI ({rsi}) < Buy Threshold ({thresholds['buy_rsi_threshold']}), Current Price ({current_price}) > Moving Average ({moving_avg})", "green"))
             self._execute_buy(current_price)
-            logger.info("Buy Signal Triggered")
+            logger.info(colored("Buy Signal Triggered"), "green")
         else:
-            logger.info(f"Buy conditions not met: MACD ({macd}), Signal ({signal}), RSI ({rsi}), Current Price ({current_price}), Moving Average ({moving_avg})")
+            logger.info(colored(f"Buy conditions not met: MACD ({macd}), Signal ({signal}), RSI ({rsi}), Current Price ({current_price}), Moving Average ({moving_avg})", "yellow"))
         
         # Sell signal: More nuanced conditions
         if (macd < signal and 
             rsi > thresholds['sell_rsi_threshold'] and 
             current_price < moving_avg):
-            logger.info(f"Sell conditions met: MACD ({macd}) < Signal ({signal}), RSI ({rsi}) > Sell Threshold ({thresholds['sell_rsi_threshold']}), Current Price ({current_price}) < Moving Average ({moving_avg})")
+            logger.info(colored(f"Sell conditions met: MACD ({macd}) < Signal ({signal}), RSI ({rsi}) > Sell Threshold ({thresholds['sell_rsi_threshold']}), Current Price ({current_price}) < Moving Average ({moving_avg})", "red"))
             self._execute_sell(current_price, "Technical Sell Signal")
-            logger.info("Sell Signal Triggered")
+            logger.info(colored("Sell Signal Triggered"), "red")
         else:
-            logger.info(f"Sell conditions not met: MACD ({macd}), Signal ({signal}), RSI ({rsi}), Current Price ({current_price}), Moving Average ({moving_avg})")
+            logger.info(colored(f"Sell conditions not met: MACD ({macd}), Signal ({signal}), RSI ({rsi}), Current Price ({current_price}), Moving Average ({moving_avg})", "yellow"))
 
 
     def _execute_buy(self, current_price):
@@ -196,7 +197,7 @@ class AdvancedTradingStrategy:
                 'timestamp': time.time()
             })
 
-            logger.info(f"Buy executed successfully at Limit Price={limit_price}")
+            logger.info(colored(f"Buy executed successfully at Limit Price={limit_price}"), "green")
 
             # Set cooldown
             self.cooldown_end_time = time.time() + 300
