@@ -47,47 +47,53 @@ class KrakenAPI:
             logger.error(f"API call failed ({error})")
             return None
 
-    def get_btc_price(self) -> Optional[float]:
-        result = self._make_request(method="Ticker", path="/0/public/", data={"pair": "XXBTZUSD"})
+    def get_btc_order_book(self) -> Optional[Dict]:
+        """Gets the current order book for BTC/USD."""
+        result = self._make_request(method="Depth", path="/0/public/", data={"pair": "XXBTZUSD"})
         if result:
-            return float(result['XXBTZUSD']['c'][0])
+            return result.get('XXBTZUSD', None)
+        return None
+
+    def get_optimal_price(self, order_book: Dict, side: str, buffer: float = 0.2) -> Optional[float]:
+        """Calculates an optimal price for buying or selling based on order book."""
+        if side == "buy":
+            best_ask = float(order_book['asks'][0][0])
+            return best_ask - buffer
+        elif side == "sell":
+            best_bid = float(order_book['bids'][0][0])
+            return best_bid + buffer
         return None
 
     def get_historical_prices(self, pair: str = "XXBTZUSD", interval: int = 60, since: Optional[int] = None) -> List[float]:
+        """Fetches historical OHLC (Open/High/Low/Close) data for the given pair."""
         data = {"pair": pair, "interval": interval}
         if since:
             data["since"] = since
         result = self._make_request(method="OHLC", path="/0/public/", data=data)
         if result:
-            return [float(entry[4]) for entry in result.get(pair, [])]
+            return [float(entry[4]) for entry in result.get(pair, [])]  # Return the 'close' price
         return []
 
-    def execute_trade(self, volume: float, side: str, price: Optional[float] = None) -> None:
-        data = {
-            "pair": "XXBTZUSD",
-            "type": side,
-            "ordertype": "limit" if price else "market",
-            "volume": volume,
-        }
-        if price:
-            data["price"] = price
-        result = self._make_request(method="AddOrder", path="/0/private/", data=data, is_private=True)
+    def get_btc_price(self) -> Optional[float]:
+        """Fetches the current BTC price."""
+        result = self._make_request(method="Ticker", path="/0/public/", data={"pair": "XXBTZUSD"})
         if result:
-            logger.info(f"Executed {side} order for {volume} BTC at {price or 'market price'}. Order response: {result}")
+            return float(result['XXBTZUSD']['c'][0])  # 'c' represents the current close price
+        return None
 
-    def get_account_balance(self) -> Optional[Dict[str, float]]:
-        result = self._make_request(method="Balance", path="/0/private/", is_private=True)
-        return result
+    def execute_trade(self, volume: float, side: str) -> None:
+        order_book = self.get_btc_order_book()
+        if order_book:
+            optimal_price = self.get_optimal_price(order_book, side)
+            if optimal_price:
+                data = {
+                    "pair": "XXBTZUSD",
+                    "type": side,
+                    "ordertype": "limit",
+                    "price": optimal_price,
+                    "volume": volume,
+                }
+                result = self._make_request(method="AddOrder", path="/0/private/", data=data, is_private=True)
+                if result:
+                    logger.info(f"Executed {side} order for {volume} BTC at {optimal_price}. Order response: {result}")
 
-    def get_open_orders(self) -> Optional[Dict]:
-        result = self._make_request(method="OpenOrders", path="/0/private/", is_private=True)
-        return result.get('open', None) if result else None
-
-# Initialize the API client
-kraken_api = KrakenAPI(API_KEY, API_SECRET, API_DOMAIN)
-
-# Example usage
-if __name__ == "__main__":
-    btc_price = kraken_api.get_btc_price()
-    if btc_price:
-        logger.info(f"Current BTC price: {btc_price}")

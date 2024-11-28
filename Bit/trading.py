@@ -61,12 +61,37 @@ class TradingStrategy:
                     self._execute_sell(current_price)
                     return
 
-        if macd > signal and rsi < 40:  # Buy signal when MACD crossover and RSI < 40
+        # Detailed analysis for trade conditions
+        if macd <= signal:
+            macd_reason = f"MACD ({macd}) is not greater than Signal ({signal})"
+        else:
+            macd_reason = "MACD is greater than Signal"
+
+        if rsi >= 40:
+            rsi_reason = f"RSI ({rsi}) is not below 40"
+        else:
+            rsi_reason = "RSI is below 40"
+
+        if macd >= signal:
+            sell_macd_reason = f"MACD ({macd}) is not less than Signal ({signal})"
+        else:
+            sell_macd_reason = "MACD is less than Signal"
+
+        if rsi <= 60:
+            sell_rsi_reason = f"RSI ({rsi}) is not above 60"
+        else:
+            sell_rsi_reason = "RSI is above 60"
+
+        # Buy signal when MACD crossover and RSI < 40
+        if macd > signal and rsi < 40:
             self._execute_buy(current_price)
-        elif macd < signal and rsi > 60:  # Sell signal when MACD crossover below and RSI > 60
+        # Sell signal when MACD crossover below and RSI > 60
+        elif macd < signal and rsi > 60:
             self._execute_sell(current_price)
         else:
-            logger.info(f"No trade signal detected: MACD {macd}, Signal {signal}, RSI {rsi}. Conditions for buy: MACD > Signal and RSI < 40, Conditions for sell: MACD < Signal and RSI > 60.")
+            logger.info(f"No trade signal detected: MACD {macd}, Signal {signal}, RSI {rsi}. "
+                        f"Buy condition: {macd_reason} and {rsi_reason}. "
+                        f"Sell condition: {sell_macd_reason} and {sell_rsi_reason}.")
 
     def _execute_buy(self, current_price: float):
         potential_profit_loss = None
