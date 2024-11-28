@@ -6,6 +6,7 @@ from portfolio import portfolio
 from config import MIN_TRADE_VOLUME, API_KEY, API_SECRET, API_DOMAIN
 from logger_config import logger
 from typing import List, Optional
+from termcolor import colored
 
 # Initialize Kraken API client
 kraken_api = KrakenAPI(API_KEY, API_SECRET, API_DOMAIN)
