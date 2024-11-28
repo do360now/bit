@@ -5,3 +5,4 @@ schedule
 websockets
 tenacity
 numpy
+termcolor
