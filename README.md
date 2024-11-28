@@ -1,4 +1,7 @@
-# Trading Application Overview
+# Bitcoin Trading Application Overview
+
+If you find this automation useful and profitable, consider showing your support with a donation. Every contribution is greatly appreciated! 😊
+BTC: 1BDhXcY9brMprLT7KCWnmjSPPCfifNz5kC
 
 ## Introduction
 
