@@ -115,7 +115,7 @@ class AdvancedTradingStrategy:
 
     def _determine_trade_action(self, current_price, macd, signal, rsi, thresholds):
         current_time = time.time()
-                  
+
         # Check cooldown and existing position
         if current_time < self.cooldown_end_time:
             logger.info("In cooldown period, skipping trade action.")
@@ -127,19 +127,20 @@ class AdvancedTradingStrategy:
                 current_price, 
                 self.last_trade_price
             )
-            logger.info(f"Potential Profit/Loss: {potential_profit_loss}")
-            
+            logger.info(f"Potential Profit/Loss: {potential_profit_loss}%")
+
             # Stop loss check
             if potential_profit_loss <= -thresholds['stop_loss_percent'] * 100:
+                logger.info(f"Stop loss triggered: Current Price={current_price}, Last Trade Price={self.last_trade_price}")
                 self._execute_sell(current_price, "Stop Loss Triggered")
-                logger.info("Stop Loss Triggered")
                 return
-            
+
             # Take profit check
             if potential_profit_loss >= thresholds['take_profit_percent'] * 100:
+                logger.info(f"Take profit triggered: Current Price={current_price}, Last Trade Price={self.last_trade_price}")
                 self._execute_sell(current_price, "Take Profit Triggered")
-                logger.info("Take Profit Triggered")
                 return
+
         if not self.last_trade_price:
             logger.info(f"No trade executed. Conditions not met: MACD ({macd}) > Signal ({signal}), RSI ({rsi}) within thresholds.")
 
@@ -158,34 +159,45 @@ class AdvancedTradingStrategy:
         if (macd > signal and 
             rsi < thresholds['buy_rsi_threshold'] and 
             current_price > moving_avg):
+            logger.info(f"Buy conditions met: MACD ({macd}) > Signal ({signal}), RSI ({rsi}) < Buy Threshold ({thresholds['buy_rsi_threshold']}), Current Price ({current_price}) > Moving Average ({moving_avg})")
             self._execute_buy(current_price)
             logger.info("Buy Signal Triggered")
+        else:
+            logger.info(f"Buy conditions not met: MACD ({macd}), Signal ({signal}), RSI ({rsi}), Current Price ({current_price}), Moving Average ({moving_avg})")
         
         # Sell signal: More nuanced conditions
-        elif (macd < signal and 
-              rsi > thresholds['sell_rsi_threshold'] and 
-              current_price < moving_avg):
+        if (macd < signal and 
+            rsi > thresholds['sell_rsi_threshold'] and 
+            current_price < moving_avg):
+            logger.info(f"Sell conditions met: MACD ({macd}) < Signal ({signal}), RSI ({rsi}) > Sell Threshold ({thresholds['sell_rsi_threshold']}), Current Price ({current_price}) < Moving Average ({moving_avg})")
             self._execute_sell(current_price, "Technical Sell Signal")
             logger.info("Sell Signal Triggered")
+        else:
+            logger.info(f"Sell conditions not met: MACD ({macd}), Signal ({signal}), RSI ({rsi}), Current Price ({current_price}), Moving Average ({moving_avg})")
+
 
     def _execute_buy(self, current_price):
         """Execute buy with enhanced logging and tracking."""
         trading_amount = portfolio.portfolio['TRADING']
-        
-        logger.info(f"Buy Signal: Price={current_price}, Trading Amount={trading_amount}")
+
+        # Add a limit buffer to try and buy at a lower price
+        limit_price = current_price * 0.999  # Set a limit order 0.1% below the current market price
+        logger.info(f"Buy Signal: Target Limit Price={limit_price}, Trading Amount={trading_amount}")
         try:
-            self.kraken_api.execute_trade(trading_amount, 'buy')
-            
+            self.kraken_api.execute_trade(trading_amount, 'buy', price=limit_price, order_type='limit')
+
             # Update tracking
-            self.last_trade_price = current_price
+            self.last_trade_price = limit_price
             self.last_trade_type = 'buy'
             self.total_trades += 1
             self.trade_history.append({
                 'type': 'buy', 
-                'price': current_price, 
+                'price': limit_price, 
                 'timestamp': time.time()
             })
-            
+
+            logger.info(f"Buy executed successfully at Limit Price={limit_price}")
+
             # Set cooldown
             self.cooldown_end_time = time.time() + 300
 
@@ -195,30 +207,33 @@ class AdvancedTradingStrategy:
     def _execute_sell(self, current_price, reason):
         """Execute sell with enhanced logging and tracking."""
         trading_amount = portfolio.portfolio['TRADING']
-        
-        logger.info(f"Sell Signal: Price={current_price}, Reason={reason}")
+
+        # Add a limit buffer to try and sell at a higher price
+        limit_price = current_price * 1.001  # Set a limit order 0.1% above the current market price
+        logger.info(f"Sell Signal: Target Limit Price={limit_price}, Reason={reason}, Trading Amount={trading_amount}")
         try:
-            self.kraken_api.execute_trade(trading_amount, 'sell')
-            
+            self.kraken_api.execute_trade(trading_amount, 'sell', price=limit_price, order_type='limit')
+
             # Update tracking
             if self.last_trade_price:
                 profit_loss = calculate_potential_profit_loss(
-                    current_price, 
+                    limit_price, 
                     self.last_trade_price
                 )
                 if profit_loss > 0:
                     self.profitable_trades += 1
+                logger.info(f"Sell executed successfully at Limit Price={limit_price} with Profit/Loss={profit_loss}")
 
-            self.last_trade_price = current_price
+            self.last_trade_price = limit_price
             self.last_trade_type = 'sell'
             self.total_trades += 1
             self.trade_history.append({
                 'type': 'sell', 
-                'price': current_price, 
+                'price': limit_price, 
                 'timestamp': time.time(),
                 'reason': reason
             })
-            
+
             # Set cooldown
             self.cooldown_end_time = time.time() + 300
 

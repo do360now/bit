@@ -18,15 +18,15 @@ API_DOMAIN = os.getenv("API_DOMAIN", "https://api.kraken.com")
 # Allocation strategy for portfolio management
 ALLOCATIONS = {
     'HODL': float(os.getenv("ALLOC_HODL", 0.7)),
-    'YIELD': float(os.getenv("ALLOC_YIELD", 0.2)),
-    'TRADING': float(os.getenv("ALLOC_TRADING", 0.1))
+    'YIELD': float(os.getenv("ALLOC_YIELD", 0.15)),
+    'TRADING': float(os.getenv("ALLOC_TRADING", 0.15))
 }
 
 # Initial BTC balance
-TOTAL_BTC = float(os.getenv("TOTAL_BTC", 0.00199185))
+TOTAL_BTC = float(os.getenv("TOTAL_BTC", 0.0075908))
 
 # Minimum trading volume to avoid very small trades
-MIN_TRADE_VOLUME = float(os.getenv("MIN_TRADE_VOLUME", 0.0001))
+MIN_TRADE_VOLUME = float(os.getenv("MIN_TRADE_VOLUME", 0.00015))
 
 # Cooldown period in seconds between trades
 GLOBAL_TRADE_COOLDOWN = int(os.getenv("GLOBAL_TRADE_COOLDOWN", 900))  # 15 minutes
