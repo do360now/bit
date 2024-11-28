@@ -1,26 +1,40 @@
+from dataclasses import dataclass, field
+from typing import Dict
 from config import ALLOCATIONS, TOTAL_BTC
 from logger_config import logger
 
-# Portfolio balances
+@dataclass
 class Portfolio:
-    def __init__(self, allocations: dict, total_btc: float):
-        self.allocations = allocations
-        self.total_btc = total_btc
+    total_btc: float = TOTAL_BTC
+    allocations: Dict[str, float] = field(default_factory=lambda: ALLOCATIONS)
+    portfolio: Dict[str, float] = field(init=False)
+
+    def __post_init__(self):
+        self._initialize_portfolio()
+
+    def _initialize_portfolio(self):
         self.portfolio = {
-            'HODL': total_btc * allocations['HODL'],
-            'YIELD': total_btc * allocations['YIELD'],
-            'TRADING': total_btc * allocations['TRADING'],
+            category: self.total_btc * weight 
+            for category, weight in self.allocations.items()
         }
 
     def rebalance(self):
+        """Adjust portfolio allocation based on current total balance."""
         self.total_btc = sum(self.portfolio.values())
-        self.portfolio['HODL'] = self.total_btc * self.allocations['HODL']
-        self.portfolio['YIELD'] = self.total_btc * self.allocations['YIELD']
-        self.portfolio['TRADING'] = self.total_btc * self.allocations['TRADING']
+        for category, weight in self.allocations.items():
+            self.portfolio[category] = self.total_btc * weight
+        
         logger.info(f"Portfolio rebalanced: {self.portfolio}")
+        logger.info(f"Total BTC balance: {self.total_btc}")
+      
 
-# Initialize Portfolio
-portfolio = Portfolio(ALLOCATIONS, TOTAL_BTC)
+    def update_balance(self, category: str, amount: float):
+        """Update balance of a specific portfolio category."""
+        self.portfolio[category] += amount
+        self.rebalance()
+
+# Singleton portfolio instance
+portfolio = Portfolio()
 
 def rebalance_portfolio():
     portfolio.rebalance()

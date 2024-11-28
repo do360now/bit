@@ -1,99 +1,232 @@
 import time
+import numpy as np
+from typing import List, Optional
 from api_kraken import KrakenAPI
-from indicators import calculate_moving_average, calculate_rsi, calculate_macd, calculate_potential_profit_loss, is_profitable_trade
-# from indicators_refactored import calculate_moving_average, calculate_rsi, calculate_macd, calculate_potential_profit_loss, is_profitable_trade
+from indicators import (
+    calculate_moving_average, 
+    calculate_rsi, 
+    calculate_macd, 
+    calculate_potential_profit_loss, 
+    is_profitable_trade
+)
 from portfolio import portfolio
 from config import MIN_TRADE_VOLUME, API_KEY, API_SECRET, API_DOMAIN
 from logger_config import logger
-from typing import List, Optional
 
-# Initialize Kraken API client
-kraken_api = KrakenAPI(API_KEY, API_SECRET, API_DOMAIN)
-
-# Trading strategy class to encapsulate trading logic
-class TradingStrategy:
-    def __init__(self, prices: Optional[List[float]] = None):
-        self.prices = prices if prices else []
-        self.last_buy_price = None
-        self.last_sell_price = None
+class AdvancedTradingStrategy:
+    def __init__(self, prices: Optional[List[float]] = None, risk_tolerance: float = 0.02):
+        self.prices = prices or []
+        self.kraken_api = KrakenAPI(API_KEY, API_SECRET, API_DOMAIN)
+        
+        # Enhanced risk management
+        self.risk_tolerance = risk_tolerance
+        self.last_trade_price = None
+        self.trade_history = []
+        
+        # Adaptive parameters
+        self.stop_loss_multiplier = 1.0
+        self.take_profit_multiplier = 1.0
+        
+        # State tracking
         self.last_trade_type = None
-        self.cooldown_end_time = 0  # Track cooldown period
-        self.stop_loss_percent = 0.05  # 5% stop loss
-        self.take_profit_percent = 0.1  # 10% take profit
+        self.cooldown_end_time = 0
+        
+        # Performance tracking
+        self.total_trades = 0
+        self.profitable_trades = 0
+
+    def _calculate_dynamic_thresholds(self):
+        """Calculate adaptive trading thresholds based on recent price volatility."""
+        if len(self.prices) < 30:
+            return {
+                'buy_rsi_threshold': 40,
+                'sell_rsi_threshold': 60,
+                'stop_loss_percent': 0.05,
+                'take_profit_percent': 0.10
+            }
+        
+        # Calculate price volatility
+        price_std = np.std(self.prices[-30:])
+        price_mean = np.mean(self.prices[-30:])
+        volatility_ratio = price_std / price_mean
+        
+        # Adaptive thresholds
+        thresholds = {
+            'buy_rsi_threshold': max(30, 40 * (1 - volatility_ratio)),
+            'sell_rsi_threshold': min(70, 60 * (1 + volatility_ratio)),
+            'stop_loss_percent': max(0.03, min(0.10, volatility_ratio * 2)),
+            'take_profit_percent': max(0.05, min(0.20, volatility_ratio * 3))
+        }
+        
+        return thresholds
 
     def execute_strategy(self):
-        current_price = kraken_api.get_btc_price()
+        # Retrieve current price
+        current_price = self.kraken_api.get_btc_price()
+        logger.info(f"Current BTC price: {current_price}")
         if current_price is None:
             logger.error("Failed to retrieve BTC price.")
             return
 
-        # Append the current price to the price history
+        # Maintain price history
         self.prices.append(current_price)
-        if len(self.prices) > 300:
-            self.prices.pop(0)  # Keep only the latest 300 prices to save memory
+        self.prices = self.prices[-300:]  # Keep last 300 prices
 
         # Calculate indicators
-        moving_avg = calculate_moving_average(self.prices)
+        thresholds = self._calculate_dynamic_thresholds()
+        logger.info(f"Dynamic thresholds: {thresholds}")
+
+        
+        # Calculate RSI
         rsi = calculate_rsi(self.prices)
-        macd, signal = calculate_macd(self.prices)
+        logger.info(f"RSI: {rsi}")
+        if rsi is None:
+            logger.error("RSI calculation failed due to insufficient data.")
+            return  # Exit early if RSI cannot be calculated
 
-        logger.info(f"Current BTC Price: {current_price}, Moving Average: {moving_avg}, RSI: {rsi}, MACD: {macd}, Signal: {signal}")
+        # Calculate MACD
+        macd_data = calculate_macd(self.prices)
+        if macd_data is None:
+            logger.error("MACD calculation failed due to insufficient data.")
+            return  # Exit early if MACD cannot be calculated
+        else:
+            macd, signal, histogram = macd_data
+            logger.info(f"MACD: {macd}, Signal: {signal}, Histogram: {histogram}")
 
-        if moving_avg and rsi and macd and signal:
-            self._determine_trade_action(current_price, macd, signal, rsi)
+        # Now all indicators are properly initialized and valid
+        self._determine_trade_action(
+            current_price,
+            macd,
+            signal,
+            rsi,
+            thresholds
+        )
 
-    def _determine_trade_action(self, current_price: float, macd: float, signal: float, rsi: float):
+        # Optionally, you could return some status or result
+        return {
+            "current_price": current_price,
+            "rsi": rsi,
+            "macd": macd,
+            "signal": signal,
+            "histogram": histogram,
+            "thresholds": thresholds,
+        }
+
+
+    def _determine_trade_action(self, current_price, macd, signal, rsi, thresholds):
         current_time = time.time()
+                  
+        # Check cooldown and existing position
         if current_time < self.cooldown_end_time:
-            logger.info("Cooldown period active. Skipping trade action.")
+            logger.info("In cooldown period, skipping trade action.")
             return
 
-        if self.last_trade_type == 'buy':
-            # Check stop loss or take profit conditions
-            if self.last_buy_price:
-                potential_profit_loss = calculate_potential_profit_loss(current_price, self.last_buy_price)
-                if potential_profit_loss <= -self.stop_loss_percent * 100:
-                    logger.info(f"Stop loss triggered. Selling BTC at {current_price} due to {potential_profit_loss:.2f}% loss.")
-                    self._execute_sell(current_price)
-                    return
-                elif potential_profit_loss >= self.take_profit_percent * 100:
-                    logger.info(f"Take profit triggered. Selling BTC at {current_price} due to {potential_profit_loss:.2f}% gain.")
-                    self._execute_sell(current_price)
-                    return
+        # Check existing position profit/loss if applicable
+        if self.last_trade_price:
+            potential_profit_loss = calculate_potential_profit_loss(
+                current_price, 
+                self.last_trade_price
+            )
+            logger.info(f"Potential Profit/Loss: {potential_profit_loss}")
+            
+            # Stop loss check
+            if potential_profit_loss <= -thresholds['stop_loss_percent'] * 100:
+                self._execute_sell(current_price, "Stop Loss Triggered")
+                logger.info("Stop Loss Triggered")
+                return
+            
+            # Take profit check
+            if potential_profit_loss >= thresholds['take_profit_percent'] * 100:
+                self._execute_sell(current_price, "Take Profit Triggered")
+                logger.info("Take Profit Triggered")
+                return
+        if not self.last_trade_price:
+            logger.info(f"No trade executed. Conditions not met: MACD ({macd}) > Signal ({signal}), RSI ({rsi}) within thresholds.")
 
-        if macd > signal and rsi < 40:  # Buy signal when MACD crossover and RSI < 40
+        # Calculate moving average
+        moving_avg = calculate_moving_average(self.prices)
+        logger.info(f"Moving Average: {moving_avg}")
+        if moving_avg is None:
+            logger.error("Moving average calculation failed due to insufficient data.")
+            return
+        macd = float(macd)
+        signal = float(signal)
+        rsi = float(rsi)
+        moving_avg = float(moving_avg)
+
+        # Buy signal: More nuanced conditions
+        if (macd > signal and 
+            rsi < thresholds['buy_rsi_threshold'] and 
+            current_price > moving_avg):
             self._execute_buy(current_price)
-        elif macd < signal and rsi > 60:  # Sell signal when MACD crossover below and RSI > 60
-            self._execute_sell(current_price)
-        else:
-            logger.info(f"No trade signal detected: MACD {macd}, Signal {signal}, RSI {rsi}. Conditions for buy: MACD > Signal and RSI < 40, Conditions for sell: MACD < Signal and RSI > 60.")
+            logger.info("Buy Signal Triggered")
+        
+        # Sell signal: More nuanced conditions
+        elif (macd < signal and 
+              rsi > thresholds['sell_rsi_threshold'] and 
+              current_price < moving_avg):
+            self._execute_sell(current_price, "Technical Sell Signal")
+            logger.info("Sell Signal Triggered")
 
-    def _execute_buy(self, current_price: float):
-        potential_profit_loss = None
-        if self.last_sell_price:
-            potential_profit_loss = calculate_potential_profit_loss(current_price, self.last_sell_price)
-
-        if self.last_trade_type != 'buy' and (potential_profit_loss is None or is_profitable_trade(potential_profit_loss)):
-            logger.info(f"Buying BTC... Signal: MACD crossover above Signal, RSI < 40 (moderately oversold), Potential Profit: {potential_profit_loss if potential_profit_loss else 0:.2f}%")
-            kraken_api.execute_trade(portfolio.portfolio['TRADING'], 'buy')
-            self.last_buy_price = current_price
+    def _execute_buy(self, current_price):
+        """Execute buy with enhanced logging and tracking."""
+        trading_amount = portfolio.portfolio['TRADING']
+        
+        logger.info(f"Buy Signal: Price={current_price}, Trading Amount={trading_amount}")
+        try:
+            self.kraken_api.execute_trade(trading_amount, 'buy')
+            
+            # Update tracking
+            self.last_trade_price = current_price
             self.last_trade_type = 'buy'
-            self.cooldown_end_time = time.time() + 300  # Set a cooldown of 5 minutes
+            self.total_trades += 1
+            self.trade_history.append({
+                'type': 'buy', 
+                'price': current_price, 
+                'timestamp': time.time()
+            })
+            
+            # Set cooldown
+            self.cooldown_end_time = time.time() + 300
 
-    def _execute_sell(self, current_price: float):
-        potential_profit_loss = None
-        if self.last_buy_price:
-            potential_profit_loss = calculate_potential_profit_loss(current_price, self.last_buy_price)
+        except Exception as e:
+            logger.error(f"Buy execution failed: {e}")
 
-        if self.last_trade_type != 'sell' and (potential_profit_loss is None or is_profitable_trade(potential_profit_loss)):
-            logger.info(f"Selling BTC... Signal: MACD crossover below Signal, RSI > 60 (moderately overbought), Potential Profit: {potential_profit_loss if potential_profit_loss else 0:.2f}%")
-            kraken_api.execute_trade(portfolio.portfolio['TRADING'], 'sell')
-            self.last_sell_price = current_price
+    def _execute_sell(self, current_price, reason):
+        """Execute sell with enhanced logging and tracking."""
+        trading_amount = portfolio.portfolio['TRADING']
+        
+        logger.info(f"Sell Signal: Price={current_price}, Reason={reason}")
+        try:
+            self.kraken_api.execute_trade(trading_amount, 'sell')
+            
+            # Update tracking
+            if self.last_trade_price:
+                profit_loss = calculate_potential_profit_loss(
+                    current_price, 
+                    self.last_trade_price
+                )
+                if profit_loss > 0:
+                    self.profitable_trades += 1
+
+            self.last_trade_price = current_price
             self.last_trade_type = 'sell'
-            self.cooldown_end_time = time.time() + 300  # Set a cooldown of 5 minutes
+            self.total_trades += 1
+            self.trade_history.append({
+                'type': 'sell', 
+                'price': current_price, 
+                'timestamp': time.time(),
+                'reason': reason
+            })
+            
+            # Set cooldown
+            self.cooldown_end_time = time.time() + 300
 
-# Initialize TradingStrategy
-trading_strategy_instance = TradingStrategy()
+        except Exception as e:
+            logger.error(f"Sell execution failed: {e}")
+
+# Initialize strategy
+trading_strategy_instance = AdvancedTradingStrategy()
 
 def trading_strategy(prices: List[float]):
     trading_strategy_instance.prices = prices

@@ -1,42 +1,77 @@
 import numpy as np
 import pandas as pd
-from typing import Optional, List
+from typing import List, Optional, Tuple
 
-# Function to calculate Moving Average
-def calculate_moving_average(prices: List[float], window: int = 7) -> Optional[float]:
+def calculate_moving_average(prices: List[float], window: int = 7, mode: str = 'simple') -> Optional[float]:
     if len(prices) < window:
-        return None  # Not enough data points yet
-    return float(np.mean(prices[-window:]))
+        return None
+    
+    if mode == 'simple':
+        return float(np.mean(prices[-window:]))
+    elif mode == 'exponential':
+        return float(pd.Series(prices).ewm(span=window, adjust=False).mean().iloc[-1])
+    else:
+        raise ValueError(f"Unsupported moving average mode: {mode}")
 
-# Function to calculate Relative Strength Index (RSI)
-def calculate_rsi(prices: List[float], window: int = 14) -> Optional[float]:
+def calculate_rsi(prices: List[float], window: int = 14, smoothing: bool = True) -> Optional[float]:
     if len(prices) < window + 1:
-        return None  # Not enough data points yet
-    delta = np.diff(prices)
-    gains = np.where(delta > 0, delta, 0)
-    losses = np.where(delta < 0, -delta, 0)
-    avg_gain = np.mean(gains[-window:])
-    avg_loss = np.mean(losses[-window:])
-    if avg_loss == 0:
-        return 100.0  # Prevent division by zero, indicates strong upward trend
-    rs = avg_gain / avg_loss
-    return float(100 - (100 / (1 + rs)))
+        return None
 
-# Function to calculate Moving Average Convergence Divergence (MACD)
-def calculate_macd(prices: List[float], short_window: int = 12, long_window: int = 26, signal_window: int = 7) -> Optional[tuple]:
+    delta = np.diff(prices)
+    gains = np.maximum(delta, 0)
+    losses = np.abs(np.minimum(delta, 0))
+
+    avg_gain = pd.Series(gains).rolling(window=window).mean() if smoothing else np.mean(gains[-window:])
+    avg_loss = pd.Series(losses).rolling(window=window).mean() if smoothing else np.mean(losses[-window:])
+
+    # Ensure avg_gain and avg_loss are scalars before use
+    avg_gain = float(avg_gain.iloc[-1]) if isinstance(avg_gain, pd.Series) else avg_gain
+    avg_loss = float(avg_loss.iloc[-1]) if isinstance(avg_loss, pd.Series) else avg_loss
+
+    rs = avg_gain / avg_loss if avg_loss != 0 else 1
+    return float(100.0 - (100.0 / (1.0 + rs)))
+
+
+def calculate_macd(
+    prices: List[float], 
+    short_window: int = 12, 
+    long_window: int = 26, 
+    signal_window: int = 7
+) -> Optional[Tuple[float, float, float]]:
     if len(prices) < long_window:
-        return None, None  # Not enough data points yet
+        return None
+    
     prices_series = pd.Series(prices)
     short_ema = prices_series.ewm(span=short_window, adjust=False).mean()
     long_ema = prices_series.ewm(span=long_window, adjust=False).mean()
+    
     macd = short_ema - long_ema
-    signal = macd.ewm(span=signal_window, adjust=False).mean()
-    return float(macd.iloc[-1]), float(signal.iloc[-1])
+    signal_line = macd.ewm(span=signal_window, adjust=False).mean()
+    histogram = macd - signal_line
+    
+    return (
+        float(macd.iloc[-1]), 
+        float(signal_line.iloc[-1]), 
+        float(histogram.iloc[-1])
+    )
 
-# Function to calculate potential profit or loss percentage
+def calculate_bollinger_bands(prices: List[float], window: int = 20, num_std: float = 2.0) -> Optional[dict]:
+    if len(prices) < window:
+        return None
+    
+    prices_series = pd.Series(prices)
+    rolling_mean = prices_series.rolling(window=window).mean()
+    rolling_std = prices_series.rolling(window=window).std()
+    
+    return {
+        'middle_band': float(rolling_mean.iloc[-1]),
+        'upper_band': float(rolling_mean.iloc[-1] + num_std * rolling_std.iloc[-1]),
+        'lower_band': float(rolling_mean.iloc[-1] - num_std * rolling_std.iloc[-1])
+    }
+
 def calculate_potential_profit_loss(current_price: float, previous_price: float) -> float:
     return ((current_price - previous_price) / previous_price) * 100.0
 
-# Function to determine if the potential gain/loss is greater than the transaction fee
-def is_profitable_trade(potential_profit_loss: float, transaction_fee_percentage: float = 0.26) -> bool:
-    return potential_profit_loss > transaction_fee_percentage
+def is_profitable_trade(potential_profit_loss: float, transaction_fee_percentage: float = 0.0026) -> bool:
+    total_fees = transaction_fee_percentage * 2  # Considering both buy and sell fees
+    return potential_profit_loss > total_fees

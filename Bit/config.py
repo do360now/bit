@@ -29,4 +29,4 @@ TOTAL_BTC = float(os.getenv("TOTAL_BTC", 0.00199185))
 MIN_TRADE_VOLUME = float(os.getenv("MIN_TRADE_VOLUME", 0.0001))
 
 # Cooldown period in seconds between trades
-GLOBAL_TRADE_COOLDOWN = int(os.getenv("GLOBAL_TRADE_COOLDOWN", 300))  # 5 minutes
+GLOBAL_TRADE_COOLDOWN = int(os.getenv("GLOBAL_TRADE_COOLDOWN", 900))  # 15 minutes
