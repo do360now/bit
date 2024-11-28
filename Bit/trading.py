@@ -112,7 +112,7 @@ class TradingStrategy:
             potential_profit_loss = calculate_potential_profit_loss(current_price, self.last_buy_price)
 
         if self.last_trade_type != 'sell' and (potential_profit_loss is None or is_profitable_trade(potential_profit_loss)):
-            logger.info(colored(f"Selling BTC... Signal: MACD crossover below Signal, RSI > 60 (moderately overbought), Potential Profit: {potential_profit_loss if potential_profit_loss else 0:.2f}%"), "green")
+            logger.info(f"\033[92mSelling BTC...\033[0m Signal: \033[92mMACD crossover below Signal\033[0m, \033[92mRSI > 60 (moderately overbought)\033[0m, Potential Profit: {potential_profit_loss if potential_profit_loss else 0:.2f}%")
             kraken_api.execute_trade(portfolio.portfolio['TRADING'], 'sell')
             self.last_sell_price = current_price
             self.last_trade_type = 'sell'

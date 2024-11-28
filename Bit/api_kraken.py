@@ -95,5 +95,5 @@ class KrakenAPI:
                 }
                 result = self._make_request(method="AddOrder", path="/0/private/", data=data, is_private=True)
                 if result:
-                    logger.info(f"Executed {side} order for {volume} BTC at {optimal_price}. Order response: {result}")
+                    logger.info(f"\033[92mExecuted {side} order for {volume} BTC at {optimal_price}.\033[0m Order response: {result}")
 
