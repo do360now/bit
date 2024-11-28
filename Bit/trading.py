@@ -46,7 +46,7 @@ class TradingStrategy:
     def _determine_trade_action(self, current_price: float, macd: float, signal: float, rsi: float):
         current_time = time.time()
         if current_time < self.cooldown_end_time:
-            logger.info("Cooldown period active. Skipping trade action.")
+            logger.info(colored("Cooldown period active. Skipping trade action."), "yellow")
             return
 
         if self.last_trade_type == 'buy':
@@ -54,11 +54,11 @@ class TradingStrategy:
             if self.last_buy_price:
                 potential_profit_loss = calculate_potential_profit_loss(current_price, self.last_buy_price)
                 if potential_profit_loss <= -self.stop_loss_percent * 100:
-                    logger.info(f"Stop loss triggered. Selling BTC at {current_price} due to {potential_profit_loss:.2f}% loss.")
+                    logger.info(colored(f"Stop loss triggered. Selling BTC at {current_price} due to {potential_profit_loss:.2f}% loss."), "red")
                     self._execute_sell(current_price)
                     return
                 elif potential_profit_loss >= self.take_profit_percent * 100:
-                    logger.info(f"Take profit triggered. Selling BTC at {current_price} due to {potential_profit_loss:.2f}% gain.")
+                    logger.info(colored(f"Take profit triggered. Selling BTC at {current_price} due to {potential_profit_loss:.2f}% gain."), "green")
                     self._execute_sell(current_price)
                     return
 
@@ -69,19 +69,19 @@ class TradingStrategy:
             macd_reason = "MACD is greater than Signal"
 
         if rsi >= 40:
-            rsi_reason = f"RSI ({rsi}) is not below 40"
+            rsi_reason = f"\033[91mRSI ({rsi}) is not below 40\033[0m"
         else:
-            rsi_reason = "RSI is below 40"
+            rsi_reason = "\033[92mRSI is below 40\033[0m"
 
         if macd >= signal:
-            sell_macd_reason = f"MACD ({macd}) is not less than Signal ({signal})"
+            sell_macd_reason = f"\033[91mMACD ({macd}) is not less than Signal ({signal})\033[0m"
         else:
-            sell_macd_reason = "MACD is less than Signal"
+            sell_macd_reason = "\033[92mMACD is less than Signal\033[0m"
 
         if rsi <= 60:
-            sell_rsi_reason = f"RSI ({rsi}) is not above 60"
+            sell_rsi_reason = f"\033[91mRSI ({rsi}) is not above 60\033[0m"
         else:
-            sell_rsi_reason = "RSI is above 60"
+            sell_rsi_reason = "\033[92mRSI is above 60\033[0m"
 
         # Buy signal when MACD crossover and RSI < 40
         if macd > signal and rsi < 40:
@@ -100,7 +100,7 @@ class TradingStrategy:
             potential_profit_loss = calculate_potential_profit_loss(current_price, self.last_sell_price)
 
         if self.last_trade_type != 'buy' and (potential_profit_loss is None or is_profitable_trade(potential_profit_loss)):
-            logger.info(f"Buying BTC... Signal: MACD crossover above Signal, RSI < 40 (moderately oversold), Potential Profit: {potential_profit_loss if potential_profit_loss else 0:.2f}%")
+            logger.info(f"\033[92mBuying BTC...\033[0m Signal: \033[92mMACD crossover above Signal\033[0m, \033[92mRSI < 40 (moderately oversold)\033[0m, Potential Profit: {potential_profit_loss if potential_profit_loss else 0:.2f}%")
             kraken_api.execute_trade(portfolio.portfolio['TRADING'], 'buy')
             self.last_buy_price = current_price
             self.last_trade_type = 'buy'
@@ -112,7 +112,7 @@ class TradingStrategy:
             potential_profit_loss = calculate_potential_profit_loss(current_price, self.last_buy_price)
 
         if self.last_trade_type != 'sell' and (potential_profit_loss is None or is_profitable_trade(potential_profit_loss)):
-            logger.info(f"Selling BTC... Signal: MACD crossover below Signal, RSI > 60 (moderately overbought), Potential Profit: {potential_profit_loss if potential_profit_loss else 0:.2f}%")
+            logger.info(colored(f"Selling BTC... Signal: MACD crossover below Signal, RSI > 60 (moderately overbought), Potential Profit: {potential_profit_loss if potential_profit_loss else 0:.2f}%"), "green")
             kraken_api.execute_trade(portfolio.portfolio['TRADING'], 'sell')
             self.last_sell_price = current_price
             self.last_trade_type = 'sell'
