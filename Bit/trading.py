@@ -149,7 +149,7 @@ class AdvancedTradingStrategy:
         moving_avg = calculate_moving_average(self.prices)
         logger.info(f"Moving Average: {moving_avg}")
         if moving_avg is None:
-            logger.error(colored("Moving average calculation failed due to insufficient data."), "red")
+            logger.error(colored("Moving average calculation failed due to insufficient data.", "red"))
             return
         macd = float(macd)
         signal = float(signal)
@@ -172,7 +172,7 @@ class AdvancedTradingStrategy:
             current_price < moving_avg):
             logger.info(colored(f"Sell conditions met: MACD ({macd}) < Signal ({signal}), RSI ({rsi}) > Sell Threshold ({thresholds['sell_rsi_threshold']}), Current Price ({current_price}) < Moving Average ({moving_avg})", "red"))
             self._execute_sell(current_price, "Technical Sell Signal")
-            logger.info(colored("Sell Signal Triggered"), "red")
+            logger.info(colored("Sell Signal Triggered", "red"))
         else:
             logger.info(colored(f"Sell conditions not met: MACD ({macd}), Signal ({signal}), RSI ({rsi}), Current Price ({current_price}), Moving Average ({moving_avg})", "yellow"))
 

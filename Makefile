@@ -12,5 +12,5 @@ run_bit:
 
 docker_build:
 	@echo "Building docker image..."
-	@docker build -t kraken-trading-bot:0.0.1 .
+	@docker build -t kraken-trading-bot:1.0.0-claude .
 
