@@ -6,3 +6,4 @@ websockets
 tenacity
 numpy
 termcolor
+nltk
