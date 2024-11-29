@@ -18,8 +18,8 @@ class TradingStrategy:
         self.last_sell_price = None
         self.last_trade_type = None
         self.cooldown_end_time = 0  # Track cooldown period
-        self.stop_loss_percent = 0.05  # 5% stop loss
-        self.take_profit_percent = 0.1  # 10% take profit
+        self.stop_loss_percent = 0.03  # 3% stop loss
+        self.take_profit_percent = 0.15  # 15% take profit
         self.sentiment_score = 0.0  # Initialize sentiment score
 
     def update_sentiment(self):
@@ -52,29 +52,24 @@ class TradingStrategy:
             self._determine_trade_action(current_price, macd, signal, rsi)
 
     def _determine_trade_action(self, current_price: float, macd: float, signal: float, rsi: float):
-        current_time = time.time()
-        if current_time < self.cooldown_end_time:
-            logger.info(colored("Cooldown period active. Skipping trade action."), "yellow")
-            return
-
         # Integrate sentiment into the trade decision
         if self.sentiment_score > 0.1:
             logger.info("Positive sentiment detected. Considering buying opportunity...")
             # Reduce RSI threshold for buying if sentiment is positive
-            if macd > signal and rsi < 50:
-                logger.info(f"MACD ({macd}) > Signal ({signal}) and RSI ({rsi}) < 50 with positive sentiment. Executing buy.")
+            if macd > signal and rsi < 60:
+                logger.info(f"MACD ({macd}) > Signal ({signal}) and RSI ({rsi}) < 60 with positive sentiment. Executing buy.")
                 self._execute_buy(current_price)
             else:
-                logger.info(f"Conditions not met for buying despite positive sentiment: MACD ({macd}) should be greater than Signal ({signal}), and RSI ({rsi}) should be below 50.")
+                logger.info(colored(f"Conditions not met for buying despite positive sentiment: MACD {macd} should be greater than Signal {signal}, and RSI {rsi} should be below 60.", 'yellow'))
 
         elif self.sentiment_score < -0.1:
             logger.info("Negative sentiment detected. Considering selling opportunity...")
             # Reduce RSI threshold for selling if sentiment is negative
-            if macd < signal and rsi > 50:
-                logger.info(f"MACD ({macd}) < Signal ({signal}) and RSI ({rsi}) > 50 with negative sentiment. Executing sell.")
+            if macd < signal and rsi > 45:
+                logger.info(f"MACD ({macd}) < Signal ({signal}) and RSI ({rsi}) > 45 with negative sentiment. Executing sell.")
                 self._execute_sell(current_price)
             else:
-                logger.info(f"Conditions not met for selling despite negative sentiment: MACD ({macd}) should be less than Signal ({signal}), and RSI ({rsi}) should be above 50.")
+                logger.info(colored(f"Conditions not met for selling despite negative sentiment: MACD {macd} should be less than Signal {signal}, and RSI {rsi} should be above 45.", 'yellow'))
         else:
             logger.info("Neutral sentiment. Proceeding with regular MACD and RSI checks.")
             # Buy signal when MACD crossover and RSI < 40
@@ -84,33 +79,38 @@ class TradingStrategy:
             # Sell signal when MACD crossover below and RSI > 60
             elif macd < signal and rsi > 60:
                 logger.info(f"MACD ({macd}) < Signal ({signal}) and RSI ({rsi}) > 60. Executing sell.")
-                self._execute_sell(current_price)
+                self._execute_partial_sell(current_price)
             else:
-                logger.info(f"No trade signal detected: MACD ({macd}), Signal ({signal}), RSI ({rsi}). Conditions for buying: MACD should be greater than Signal and RSI should be below 40. Conditions for selling: MACD should be less than Signal and RSI should be above 60.")
+                logger.info(colored(f"No trade signal detected: MACD {macd}, Signal {signal}, RSI {rsi}. Conditions for buying: MACD should be greater than Signal and RSI should be below 40. Conditions for selling: MACD should be less than Signal and RSI should be above 60.", 'yellow'))
 
     def _execute_buy(self, current_price: float):
         potential_profit_loss = None
         if self.last_sell_price:
             potential_profit_loss = calculate_potential_profit_loss(current_price, self.last_sell_price)
 
+        # Check market volume or trends to ensure buying during upward momentum
+        market_volume = kraken_api.get_market_volume('BTC')
+        if market_volume and market_volume < 100:
+            logger.info(f"Market volume ({market_volume}) is too low for a confident buy. Skipping buy action.")
+            return
+
         if self.last_trade_type != 'buy' and (potential_profit_loss is None or is_profitable_trade(potential_profit_loss)):
-            logger.info(f"\033[92mBuying BTC...\033[0m Signal: \033[92mMACD crossover above Signal\033[0m, \033[92mRSI < 40 (moderately oversold)\033[0m, Potential Profit: {potential_profit_loss if potential_profit_loss else 0:.2f}%")
+            logger.info(colored(f"Buying BTC... Signal: MACD crossover above SignalRSI < 40 (moderately oversold), Potential Profit: {potential_profit_loss if potential_profit_loss else 0:.2f}%, Market Volume: {market_volume}", 'green'))
             kraken_api.execute_trade(portfolio.portfolio['TRADING'], 'buy')
             self.last_buy_price = current_price
             self.last_trade_type = 'buy'
-            self.cooldown_end_time = time.time() + 300  # Set a cooldown of 5 minutes
 
-    def _execute_sell(self, current_price: float):
+    def _execute_partial_sell(self, current_price: float):
         potential_profit_loss = None
         if self.last_buy_price:
             potential_profit_loss = calculate_potential_profit_loss(current_price, self.last_buy_price)
 
         if self.last_trade_type != 'sell' and (potential_profit_loss is None or is_profitable_trade(potential_profit_loss)):
-            logger.info(f"\033[92mSelling BTC...\033[0m Signal: \033[92mMACD crossover below Signal\033[0m, \033[92mRSI > 60 (moderately overbought)\033[0m, Potential Profit: {potential_profit_loss if potential_profit_loss else 0:.2f}%")
-            kraken_api.execute_trade(portfolio.portfolio['TRADING'], 'sell')
+            logger.info(colored(f"Partially selling BTC...Signal: MACD crossover below SignalRSI > 60 (moderately overbought), Potential Profit: {potential_profit_loss if potential_profit_loss else 0:.2f}%"), 'yellow')
+            # Execute a partial sell - selling 50% of the current trading amount
+            kraken_api.execute_trade(portfolio.portfolio['TRADING'] / 2, 'sell')
             self.last_sell_price = current_price
             self.last_trade_type = 'sell'
-            self.cooldown_end_time = time.time() + 300  # Set a cooldown of 5 minutes
 
 # Initialize TradingStrategy
 trading_strategy_instance = TradingStrategy()
