@@ -106,7 +106,7 @@ class TradingStrategy:
             potential_profit_loss = calculate_potential_profit_loss(current_price, self.last_buy_price)
 
         if self.last_trade_type != 'sell' and (potential_profit_loss is None or is_profitable_trade(potential_profit_loss)):
-            logger.info(colored(f"Partially selling BTC...Signal: MACD crossover below SignalRSI > 60 (moderately overbought), Potential Profit: {potential_profit_loss if potential_profit_loss else 0:.2f}%"), 'yellow')
+            logger.info(colored(f"Partially selling BTC...Signal: MACD crossover below SignalRSI > 60 (moderately overbought), Potential Profit: {potential_profit_loss if potential_profit_loss else 0:.2f}%", 'yellow'))
             # Execute a partial sell - selling 50% of the current trading amount
             kraken_api.execute_trade(portfolio.portfolio['TRADING'] / 2, 'sell')
             self.last_sell_price = current_price

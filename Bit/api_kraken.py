@@ -58,11 +58,17 @@ class KrakenAPI:
         """Calculates an optimal price for buying or selling based on order book."""
         if side == "buy":
             best_ask = float(order_book['asks'][0][0])
-            return best_ask - buffer
+            optimal_price = best_ask - buffer
         elif side == "sell":
             best_bid = float(order_book['bids'][0][0])
-            return best_bid + buffer
-        return None
+            optimal_price = best_bid + buffer
+        else:
+            return None
+
+        # Round the optimal price to 1 decimal place as required by Kraken
+        optimal_price = round(optimal_price, 1)
+        return optimal_price
+
 
     def get_historical_prices(self, pair: str = "XXBTZUSD", interval: int = 60, since: Optional[int] = None) -> List[float]:
         """Fetches historical OHLC (Open/High/Low/Close) data for the given pair."""
@@ -96,4 +102,17 @@ class KrakenAPI:
                 result = self._make_request(method="AddOrder", path="/0/private/", data=data, is_private=True)
                 if result:
                     logger.info(f"\033[92mExecuted {side} order for {volume} BTC at {optimal_price}.\033[0m Order response: {result}")
+
+    def get_market_volume(self, pair: str = "XXBTZUSD") -> Optional[float]:
+        """Fetches the 24-hour trading volume for a given pair."""
+        result = self._make_request(method="Ticker", path="/0/public/", data={"pair": pair})
+        if result:
+            try:
+                volume = float(result[pair]['v'][1])  # 'v' represents the volume, and index [1] is the 24-hour volume
+                return volume
+            except (KeyError, ValueError) as e:
+                logger.error(f"Error retrieving market volume: {e}")
+                return None
+        return None
+
 

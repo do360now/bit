@@ -1,7 +1,12 @@
-version: "3.9"
-
 services:
-  app:
-    image: kraken-trading-ai-bot:0.1.0  # Use the pre-built image
+  trading-bot-a:
+    image: kraken-trading-ai-bot:0.1.2  # Use the pre-built image
     container_name: kraken-trading-ai-bot
     command: python main.py  # Replace with your app's entry point
+
+  trading-bot-b:
+    image: kraken-trading-claude-bot:1.0.1  # Replace with the correct image tag
+    container_name: kraken-trading-claude-bot
+    depends_on:
+      - trading-bot-a
+    entrypoint: ["sh", "-c", "sleep 180 && python main.py"]  # 3 minute delay (180 seconds)
