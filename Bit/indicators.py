@@ -1,6 +1,69 @@
 import numpy as np
 import pandas as pd
 from typing import Optional, List
+import os
+import logging
+from dotenv import load_dotenv
+from datetime import date
+import requests
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+import nltk
+
+
+# Load environment variables from the .env file
+load_dotenv()
+
+# Configure logger
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Get News API credentials from environment variables with error handling
+NEWS_API_KEY = os.getenv("NEWS_API_KEY")
+
+# Ensure NLTK data is available
+nltk.download('vader_lexicon')
+
+# Set up Sentiment Intensity Analyzer
+sid = SentimentIntensityAnalyzer()
+
+# Function to fetch the latest news articles about Bitcoin
+def fetch_latest_news() -> Optional[list]:
+    """
+    Fetch the latest news articles about Bitcoin.
+    """
+    logger.info("Fetching latest Bitcoin news...")
+    url = f"https://newsapi.org/v2/everything?q=bitcoin&sortBy=publishedAt&apiKey={NEWS_API_KEY}"
+    response = requests.get(url)
+
+    if response.status_code == 200:
+        articles = response.json().get('articles', [])
+        return articles
+    else:
+        logger.error(f"Failed to fetch news. Status code: {response.status_code}")
+        return None
+
+# Function to analyze the sentiment of news articles
+def calculate_sentiment(articles: Optional[list]) -> float:
+    """
+    Analyze the sentiment of news articles.
+    """
+    total_sentiment = 0
+    if not articles:
+        logger.warning("No articles found for sentiment analysis.")
+        return 0  # Neutral sentiment
+
+    for article in articles:
+        headline = article.get('title', '') or ''
+        description = article.get('description', '') or ''
+        content = headline + ". " + description
+
+        sentiment_score = sid.polarity_scores(content)['compound']
+        total_sentiment += sentiment_score
+
+    average_sentiment = total_sentiment / len(articles)
+    logger.info(f"Calculated average sentiment score: {average_sentiment}")
+    return average_sentiment
+
 
 # Function to calculate Moving Average
 def calculate_moving_average(prices: List[float], window: int = 7) -> Optional[float]:

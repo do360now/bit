@@ -45,13 +45,4 @@ if __name__ == "__main__":
     portfolio_manager()
 
   
-# Example usage
-if __name__ == "__main__":
-    logger.info("Fetching historical BTC data...")
-    historical_prices = kraken_api.get_historical_prices()  # Should now work as expected
-    logger.info(f"Fetched historical prices: {historical_prices[:5]}")  # Log the first 5 historical prices for verification
 
-    # Example buy and sell orders
-    volume_to_trade = 0.1  # Adjust as needed
-    kraken_api.execute_trade(volume=volume_to_trade, side="buy")
-    kraken_api.execute_trade(volume=volume_to_trade, side="sell")

@@ -1,7 +1,6 @@
 import time
 from api_kraken import KrakenAPI
-from indicators import calculate_moving_average, calculate_rsi, calculate_macd, calculate_potential_profit_loss, is_profitable_trade
-# from indicators_refactored import calculate_moving_average, calculate_rsi, calculate_macd, calculate_potential_profit_loss, is_profitable_trade
+from indicators import calculate_moving_average, calculate_rsi, calculate_macd, calculate_potential_profit_loss, is_profitable_trade, calculate_sentiment, fetch_latest_news
 from portfolio import portfolio
 from config import MIN_TRADE_VOLUME, API_KEY, API_SECRET, API_DOMAIN
 from logger_config import logger
@@ -21,8 +20,17 @@ class TradingStrategy:
         self.cooldown_end_time = 0  # Track cooldown period
         self.stop_loss_percent = 0.05  # 5% stop loss
         self.take_profit_percent = 0.1  # 10% take profit
+        self.sentiment_score = 0.0  # Initialize sentiment score
+
+    def update_sentiment(self):
+        articles = fetch_latest_news()
+        self.sentiment_score = calculate_sentiment(articles)
+        logger.info(f"Updated sentiment score: {self.sentiment_score}")
 
     def execute_strategy(self):
+        # Update sentiment score before executing the strategy
+        self.update_sentiment()
+
         current_price = kraken_api.get_btc_price()
         if current_price is None:
             logger.error("Failed to retrieve BTC price.")
@@ -38,7 +46,7 @@ class TradingStrategy:
         rsi = calculate_rsi(self.prices)
         macd, signal = calculate_macd(self.prices)
 
-        logger.info(f"Current BTC Price: {current_price}, Moving Average: {moving_avg}, RSI: {rsi}, MACD: {macd}, Signal: {signal}")
+        logger.info(f"Current BTC Price: {current_price}, Moving Average: {moving_avg}, RSI: {rsi}, MACD: {macd}, Signal: {signal}, Sentiment Score: {self.sentiment_score}")
 
         if moving_avg and rsi and macd and signal:
             self._determine_trade_action(current_price, macd, signal, rsi)
@@ -49,50 +57,36 @@ class TradingStrategy:
             logger.info(colored("Cooldown period active. Skipping trade action."), "yellow")
             return
 
-        if self.last_trade_type == 'buy':
-            # Check stop loss or take profit conditions
-            if self.last_buy_price:
-                potential_profit_loss = calculate_potential_profit_loss(current_price, self.last_buy_price)
-                if potential_profit_loss <= -self.stop_loss_percent * 100:
-                    logger.info(colored(f"Stop loss triggered. Selling BTC at {current_price} due to {potential_profit_loss:.2f}% loss."), "red")
-                    self._execute_sell(current_price)
-                    return
-                elif potential_profit_loss >= self.take_profit_percent * 100:
-                    logger.info(colored(f"Take profit triggered. Selling BTC at {current_price} due to {potential_profit_loss:.2f}% gain."), "green")
-                    self._execute_sell(current_price)
-                    return
+        # Integrate sentiment into the trade decision
+        if self.sentiment_score > 0.1:
+            logger.info("Positive sentiment detected. Considering buying opportunity...")
+            # Reduce RSI threshold for buying if sentiment is positive
+            if macd > signal and rsi < 50:
+                logger.info(f"MACD ({macd}) > Signal ({signal}) and RSI ({rsi}) < 50 with positive sentiment. Executing buy.")
+                self._execute_buy(current_price)
+            else:
+                logger.info(f"Conditions not met for buying despite positive sentiment: MACD ({macd}) should be greater than Signal ({signal}), and RSI ({rsi}) should be below 50.")
 
-        # Detailed analysis for trade conditions
-        if macd <= signal:
-            macd_reason = f"MACD ({macd}) is not greater than Signal ({signal})"
+        elif self.sentiment_score < -0.1:
+            logger.info("Negative sentiment detected. Considering selling opportunity...")
+            # Reduce RSI threshold for selling if sentiment is negative
+            if macd < signal and rsi > 50:
+                logger.info(f"MACD ({macd}) < Signal ({signal}) and RSI ({rsi}) > 50 with negative sentiment. Executing sell.")
+                self._execute_sell(current_price)
+            else:
+                logger.info(f"Conditions not met for selling despite negative sentiment: MACD ({macd}) should be less than Signal ({signal}), and RSI ({rsi}) should be above 50.")
         else:
-            macd_reason = "MACD is greater than Signal"
-
-        if rsi >= 40:
-            rsi_reason = f"\033[91mRSI ({rsi}) is not below 40\033[0m"
-        else:
-            rsi_reason = "\033[92mRSI is below 40\033[0m"
-
-        if macd >= signal:
-            sell_macd_reason = f"\033[91mMACD ({macd}) is not less than Signal ({signal})\033[0m"
-        else:
-            sell_macd_reason = "\033[92mMACD is less than Signal\033[0m"
-
-        if rsi <= 60:
-            sell_rsi_reason = f"\033[91mRSI ({rsi}) is not above 60\033[0m"
-        else:
-            sell_rsi_reason = "\033[92mRSI is above 60\033[0m"
-
-        # Buy signal when MACD crossover and RSI < 40
-        if macd > signal and rsi < 40:
-            self._execute_buy(current_price)
-        # Sell signal when MACD crossover below and RSI > 60
-        elif macd < signal and rsi > 60:
-            self._execute_sell(current_price)
-        else:
-            logger.info(f"No trade signal detected: MACD {macd}, Signal {signal}, RSI {rsi}. "
-                        f"Buy condition: {macd_reason} and {rsi_reason}. "
-                        f"Sell condition: {sell_macd_reason} and {sell_rsi_reason}.")
+            logger.info("Neutral sentiment. Proceeding with regular MACD and RSI checks.")
+            # Buy signal when MACD crossover and RSI < 40
+            if macd > signal and rsi < 40:
+                logger.info(f"MACD ({macd}) > Signal ({signal}) and RSI ({rsi}) < 40. Executing buy.")
+                self._execute_buy(current_price)
+            # Sell signal when MACD crossover below and RSI > 60
+            elif macd < signal and rsi > 60:
+                logger.info(f"MACD ({macd}) < Signal ({signal}) and RSI ({rsi}) > 60. Executing sell.")
+                self._execute_sell(current_price)
+            else:
+                logger.info(f"No trade signal detected: MACD ({macd}), Signal ({signal}), RSI ({rsi}). Conditions for buying: MACD should be greater than Signal and RSI should be below 40. Conditions for selling: MACD should be less than Signal and RSI should be above 60.")
 
     def _execute_buy(self, current_price: float):
         potential_profit_loss = None
