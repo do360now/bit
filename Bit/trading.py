@@ -182,7 +182,7 @@ class AdvancedTradingStrategy:
         trading_amount = portfolio.portfolio['TRADING']
 
         # Add a limit buffer to try and buy at a lower price
-        limit_price = current_price * 0.999  # Set a limit order 0.1% below the current market price
+        limit_price = current_price * 0.999, 1  # Set a limit order 0.1% below the current market price
         logger.info(f"Buy Signal: Target Limit Price={limit_price}, Trading Amount={trading_amount}")
         try:
             self.kraken_api.execute_trade(trading_amount, 'buy', price=limit_price)
@@ -210,7 +210,7 @@ class AdvancedTradingStrategy:
         trading_amount = portfolio.portfolio['TRADING']
 
         # Add a limit buffer to try and sell at a higher price
-        limit_price = current_price * 1.001  # Set a limit order 0.1% above the current market price
+        limit_price = current_price * 1.001, 1  # Set a limit order 0.1% above the current market price
         logger.info(f"Sell Signal: Target Limit Price={limit_price}, Reason={reason}, Trading Amount={trading_amount}")
         try:
             self.kraken_api.execute_trade(trading_amount, 'sell', price=limit_price)
