@@ -22,30 +22,44 @@ class KrakenAPI:
 
     @retry(wait=wait_exponential(min=1, max=10), stop=stop_after_attempt(5))
     def _make_request(self, method: str, path: str, data: Optional[Dict] = None, is_private: bool = False) -> Optional[Dict]:
+        # Correctly format the URL
         url = f"{self.api_domain}{path}{method}"
         headers = {"User-Agent": "Kraken REST API"}
-        post_data = ""
-
-        if data:
-            post_data = "&".join([f"{key}={value}" for key, value in data.items()])
-
+        
         if is_private:
+            # Handling private request
             nonce = str(int(time.time() * 1000))
-            post_data += f"&nonce={nonce}"
+            if not data:
+                data = {}
+            data['nonce'] = nonce
             headers["API-Key"] = self.api_key
-            headers["API-Sign"] = self._sign_request(path + method, nonce, post_data)
+            headers["API-Sign"] = self._sign_request(path + method, nonce, "&".join([f"{key}={value}" for key, value in data.items()]))
 
         try:
-            response = requests.post(url, headers=headers, data=post_data) if is_private else requests.get(url, headers=headers, params=data)
+            # Handle request method appropriately
+            if is_private:
+                response = requests.post(url, headers=headers, data=data)
+            else:
+                response = requests.get(url, headers=headers, params=data)
+            
+            # Raise any HTTP errors
             response.raise_for_status()
+
+            # Parse response
             api_reply = response.json()
+            
+            # Handle Kraken-specific errors
             if 'error' in api_reply and len(api_reply['error']) > 0:
                 logger.error(f"API error: {api_reply['error']}")
                 return None
+
             return api_reply.get('result', None)
+        
         except requests.RequestException as error:
-            logger.error(f"API call failed ({error})")
+            # Log any request exceptions
+            logger.error(f"API call failed with error: {error}")
             return None
+
 
     def get_btc_order_book(self) -> Optional[Dict]:
         """Gets the current order book for BTC/USD."""
