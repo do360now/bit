@@ -185,7 +185,7 @@ class AdvancedTradingStrategy:
         limit_price = current_price * 0.999  # Set a limit order 0.1% below the current market price
         logger.info(f"Buy Signal: Target Limit Price={limit_price}, Trading Amount={trading_amount}")
         try:
-            self.kraken_api.execute_trade(trading_amount, 'buy', price=limit_price, order_type='limit')
+            self.kraken_api.execute_trade(trading_amount, 'buy', price=limit_price)
 
             # Update tracking
             self.last_trade_price = limit_price
@@ -213,7 +213,7 @@ class AdvancedTradingStrategy:
         limit_price = current_price * 1.001  # Set a limit order 0.1% above the current market price
         logger.info(f"Sell Signal: Target Limit Price={limit_price}, Reason={reason}, Trading Amount={trading_amount}")
         try:
-            self.kraken_api.execute_trade(trading_amount, 'sell', price=limit_price, order_type='limit')
+            self.kraken_api.execute_trade(trading_amount, 'sell', price=limit_price)
 
             # Update tracking
             if self.last_trade_price:
