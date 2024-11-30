@@ -40,10 +40,10 @@ class KrakenAPI:
             logger.info(f"Making {method} request to {url} with data: {data}")
             if is_private:
                 response = requests.post(url, headers=headers, data=data)
-                # logger.info(f"Response: {response.text}")
+                logger.info(f"Response: {response.text}")
             else:
                 response = requests.get(url, headers=headers, params=data)
-                # logger.info(f"Response: {response.text}")
+                logger.info(f"Response: {response.text}")
             
             # Raise any HTTP errors
             response.raise_for_status()
