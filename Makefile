@@ -14,3 +14,7 @@ docker_build:
 	@echo "Building docker image..."
 	@docker build -t kraken-trading-claude-bot:0.1.5 .
 
+deployment: docker_build
+	@echo "Deploying agents..."
+	@docker-compose up
+
