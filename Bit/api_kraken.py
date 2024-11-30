@@ -63,9 +63,9 @@ class KrakenAPI:
 
     def get_btc_order_book(self) -> Optional[Dict]:
         """Gets the current order book for BTC/USD."""
-        result = self._make_request(method="Depth", path="/0/public/", data={"pair": "XXBTZEUR "})
+        result = self._make_request(method="Depth", path="/0/public/", data={"pair": "XXBTZEUR"})
         if result:
-            return result.get('XXBTZEUR ', None)
+            return result.get('XXBTZEUR', None)
         return None
 
     def get_optimal_price(self, order_book: Dict, side: str, buffer: float = 0.2) -> Optional[float]:
@@ -84,7 +84,7 @@ class KrakenAPI:
         return optimal_price
 
 
-    def get_historical_prices(self, pair: str = "XXBTZEUR ", interval: int = 60, since: Optional[int] = None) -> List[float]:
+    def get_historical_prices(self, pair: str = "XXBTZEUR", interval: int = 60, since: Optional[int] = None) -> List[float]:
         """Fetches historical OHLC (Open/High/Low/Close) data for the given pair."""
         data = {"pair": pair, "interval": interval}
         if since:
@@ -96,9 +96,9 @@ class KrakenAPI:
 
     def get_btc_price(self) -> Optional[float]:
         """Fetches the current BTC price."""
-        result = self._make_request(method="Ticker", path="/0/public/", data={"pair": "XXBTZEUR "})
+        result = self._make_request(method="Ticker", path="/0/public/", data={"pair": "XXBTZEUR"})
         if result:
-            return float(result['XXBTZEUR ']['c'][0])  # 'c' represents the current close price
+            return float(result['XXBTZEUR']['c'][0])  # 'c' represents the current close price
         return None
 
     def execute_trade(self, volume: float, side: str) -> None:
@@ -107,7 +107,7 @@ class KrakenAPI:
             optimal_price = self.get_optimal_price(order_book, side)
             if optimal_price:
                 data = {
-                    "pair": "XXBTZEUR ",
+                    "pair": "XXBTZEUR",
                     "type": side,
                     "ordertype": "limit",
                     "price": optimal_price,
@@ -117,7 +117,7 @@ class KrakenAPI:
                 if result:
                     logger.info(f"\033[92mExecuted {side} order for {volume} BTC at {optimal_price}.\033[0m Order response: {result}")
 
-    def get_market_volume(self, pair: str = "XXBTZEUR ") -> Optional[float]:
+    def get_market_volume(self, pair: str = "XXBTZEUR") -> Optional[float]:
         """Fetches the 24-hour trading volume for a given pair."""
         result = self._make_request(method="Ticker", path="/0/public/", data={"pair": pair})
         if result:
