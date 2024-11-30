@@ -40,23 +40,20 @@ class KrakenAPI:
             logger.info(f"Making {method} request to {url} with data: {data}")
             if is_private:
                 response = requests.post(url, headers=headers, data=data)
-                logger.info(f"Response: {response.text}")
             else:
                 response = requests.get(url, headers=headers, params=data)
-                logger.info(f"Response: {response.text}")
             
             # Raise any HTTP errors
             response.raise_for_status()
 
             # Parse response
             api_reply = response.json()
-            # logger.info(f"API reply: {api_reply}")
             
             # Handle Kraken-specific errors
             if 'error' in api_reply and len(api_reply['error']) > 0:
                 logger.error(f"API error: {api_reply['error']}")
                 return None
-
+            logger.info(f"API result: {api_reply.get('result', None)}")
             return api_reply.get('result', None)
         
         except requests.RequestException as error:
