@@ -112,7 +112,7 @@ class TradingStrategy:
             potential_profit_loss = calculate_potential_profit_loss(current_price, self.last_sell_price)
 
         # Check market volume or trends to ensure buying during upward momentum
-        market_volume = kraken_api.get_market_volume('BTC')
+        market_volume = kraken_api.get_market_volume()
         if market_volume and market_volume < 100:
             logger.info(f"Market volume ({market_volume}) is too low for a confident buy. Skipping buy action.")
             return
