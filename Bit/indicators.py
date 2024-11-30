@@ -4,7 +4,7 @@ from typing import Optional, List
 import os
 import logging
 from dotenv import load_dotenv
-from datetime import date
+from datetime import date, datetime, timedelta
 import requests
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import nltk
@@ -26,17 +26,30 @@ nltk.download('vader_lexicon')
 # Set up Sentiment Intensity Analyzer
 sid = SentimentIntensityAnalyzer()
 
+# Cache for latest news
+news_cache = {
+    "timestamp": None,
+    "articles": None
+}
+
 # Function to fetch the latest news articles about Bitcoin
 def fetch_latest_news() -> Optional[list]:
     """
     Fetch the latest news articles about Bitcoin.
     """
+    current_time = datetime.now()
+    if news_cache["timestamp"] and (current_time - news_cache["timestamp"]) < timedelta(minutes=25):
+        logger.info("Using cached news articles.")
+        return news_cache["articles"]
+    
     logger.info("Fetching latest Bitcoin news...")
     url = f"https://newsapi.org/v2/everything?q=bitcoin&sortBy=publishedAt&apiKey={NEWS_API_KEY}"
     response = requests.get(url)
 
     if response.status_code == 200:
         articles = response.json().get('articles', [])
+        news_cache["timestamp"] = current_time
+        news_cache["articles"] = articles
         return articles
     else:
         logger.error(f"Failed to fetch news. Status code: {response.status_code}")
