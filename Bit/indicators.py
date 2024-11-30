@@ -36,7 +36,7 @@ def calculate_macd(
     prices: List[float], 
     short_window: int = 12, 
     long_window: int = 26, 
-    signal_window: int = 7
+    signal_window: int = 9
 ) -> Optional[Tuple[float, float, float]]:
     if len(prices) < long_window:
         return None
