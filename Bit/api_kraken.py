@@ -48,12 +48,12 @@ class KrakenAPI:
             return None
 
     def get_btc_price(self) -> Optional[float]:
-        result = self._make_request(method="Ticker", path="/0/public/", data={"pair": "XXBTZUSD"})
+        result = self._make_request(method="Ticker", path="/0/public/", data={"pair": "XXBTZEUR"})
         if result:
-            return float(result['XXBTZUSD']['c'][0])
+            return float(result['XXBTZEUR']['c'][0])
         return None
 
-    def get_historical_prices(self, pair: str = "XXBTZUSD", interval: int = 60, since: Optional[int] = None) -> List[float]:
+    def get_historical_prices(self, pair: str = "XXBTZEUR", interval: int = 60, since: Optional[int] = None) -> List[float]:
         data = {"pair": pair, "interval": interval}
         if since:
             data["since"] = since
@@ -64,7 +64,7 @@ class KrakenAPI:
 
     def execute_trade(self, volume: float, side: str, price: Optional[float] = None) -> None:
         data = {
-            "pair": "XXBTZUSD",
+            "pair": "XXBTZEUR",
             "type": side,
             "ordertype": "limit" if price else "market",
             "volume": volume,
