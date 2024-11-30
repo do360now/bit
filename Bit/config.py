@@ -23,7 +23,7 @@ ALLOCATIONS = {
 }
 
 # Initial BTC balance
-TOTAL_BTC = float(os.getenv("TOTAL_BTC", 0.0058933102))
+TOTAL_BTC = float(os.getenv("TOTAL_BTC", 0.0126288602))
 
 # Minimum trading volume to avoid very small trades
 MIN_TRADE_VOLUME = float(os.getenv("MIN_TRADE_VOLUME", 0.0001))
