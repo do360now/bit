@@ -55,21 +55,24 @@ class TradingStrategy:
         # Integrate sentiment into the trade decision
         if self.sentiment_score > 0.1:
             logger.info("Positive sentiment detected. Considering buying opportunity...")
-            # Reduce RSI threshold for buying if sentiment is positive
-            if macd > signal and rsi < 60:
-                logger.info(f"MACD ({macd}) > Signal ({signal}) and RSI ({rsi}) < 60 with positive sentiment. Executing buy.")
+            # Adjust buy conditions dynamically based on the sentiment score
+            adjusted_rsi_threshold = 60 - (self.sentiment_score * 10)  # Lower RSI threshold with increasing positive sentiment
+            if macd > signal and rsi < adjusted_rsi_threshold:
+                logger.info(f"MACD ({macd}) > Signal ({signal}) and RSI ({rsi}) < {adjusted_rsi_threshold} with positive sentiment. Executing buy.")
                 self._execute_buy(current_price)
             else:
-                logger.info(colored(f"Conditions not met for buying despite positive sentiment: MACD {macd} should be greater than Signal {signal}, and RSI {rsi} should be below 60.", 'yellow'))
+                logger.info(colored(f"Conditions not met for buying despite positive sentiment: MACD {macd} should be greater than Signal {signal}, and RSI {rsi} should be below {adjusted_rsi_threshold}.", 'yellow'))
 
         elif self.sentiment_score < -0.1:
             logger.info("Negative sentiment detected. Considering selling opportunity...")
-            # Reduce RSI threshold for selling if sentiment is negative
-            if macd < signal and rsi > 45:
-                logger.info(f"MACD ({macd}) < Signal ({signal}) and RSI ({rsi}) > 45 with negative sentiment. Executing sell.")
+            # Adjust sell conditions dynamically based on negative sentiment
+            adjusted_rsi_threshold = 45 + (abs(self.sentiment_score) * 10)  # Increase RSI threshold with increasing negative sentiment
+            if macd < signal and rsi > adjusted_rsi_threshold:
+                logger.info(f"MACD ({macd}) < Signal ({signal}) and RSI ({rsi}) > {adjusted_rsi_threshold} with negative sentiment. Executing sell.")
                 self._execute_sell(current_price)
             else:
-                logger.info(colored(f"Conditions not met for selling despite negative sentiment: MACD {macd} should be less than Signal {signal}, and RSI {rsi} should be above 45.", 'yellow'))
+                logger.info(colored(f"Conditions not met for selling despite negative sentiment: MACD {macd} should be less than Signal {signal}, and RSI {rsi} should be above {adjusted_rsi_threshold}.", 'yellow'))
+
         else:
             logger.info("Neutral sentiment. Proceeding with regular MACD and RSI checks.")
             # Buy signal when MACD crossover and RSI < 40

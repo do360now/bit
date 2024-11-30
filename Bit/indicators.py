@@ -32,28 +32,38 @@ news_cache = {
     "articles": None
 }
 
-# Function to fetch the latest news articles about Bitcoin
-def fetch_latest_news() -> Optional[list]:
+def fetch_latest_news(top_n: int = 10) -> Optional[list]:
     """
-    Fetch the latest news articles about Bitcoin.
+    Fetch the latest news articles about Bitcoin in English.
+    Returns a list of up to 'top_n' articles.
     """
     current_time = datetime.now()
     if news_cache["timestamp"] and (current_time - news_cache["timestamp"]) < timedelta(minutes=25):
         logger.info("Using cached news articles.")
-        return news_cache["articles"]
-    
+        return news_cache["articles"][:top_n]  # Return only the top_n cached articles
+
     logger.info("Fetching latest Bitcoin news...")
-    url = f"https://newsapi.org/v2/everything?q=bitcoin&sortBy=publishedAt&apiKey={NEWS_API_KEY}"
+    url = f"https://newsapi.org/v2/everything?q=bitcoin&sortBy=publishedAt&language=en&apiKey={NEWS_API_KEY}"
     response = requests.get(url)
 
     if response.status_code == 200:
         articles = response.json().get('articles', [])
         news_cache["timestamp"] = current_time
         news_cache["articles"] = articles
-        return articles
+        logger.info(f"Successfully fetched {len(articles)} news articles.")
+
+        # Log the titles and URLs of the articles
+        for article in articles[:top_n]:  # Log only the top_n articles
+            title = article.get('title', 'No Title Available')
+            article_url = article.get('url', 'No URL Available')
+            logger.info(f"Article Title: {title}")
+            logger.info(f"Article URL: {article_url}")
+
+        return articles[:top_n]  # Return only the top_n articles
     else:
         logger.error(f"Failed to fetch news. Status code: {response.status_code}")
         return None
+
 
 # Function to analyze the sentiment of news articles
 def calculate_sentiment(articles: Optional[list]) -> float:
