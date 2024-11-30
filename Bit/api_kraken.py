@@ -53,7 +53,6 @@ class KrakenAPI:
             if 'error' in api_reply and len(api_reply['error']) > 0:
                 logger.error(f"API error: {api_reply['error']}")
                 return None
-            logger.info(f"API result: {api_reply.get('result', None)}")
             return api_reply.get('result', None)
         
         except requests.RequestException as error:
