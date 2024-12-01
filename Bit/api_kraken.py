@@ -53,13 +53,38 @@ class KrakenAPI:
             return float(result['XXBTZEUR']['c'][0])
         return None
 
+  
+
+
     def get_historical_prices(self, pair: str = "XXBTZEUR", interval: int = 60, since: Optional[int] = None) -> List[float]:
+        """Fetch historical OHLC prices for a trading pair.
+
+        Args:
+            pair (str): Trading pair, e.g., 'XXBTZEUR'.
+            interval (int): Interval in minutes for OHLC data.
+            since (Optional[int]): Optional Unix timestamp to fetch data from.
+
+        Returns:
+            List[float]: A list of close prices.
+        """
         data = {"pair": pair, "interval": interval}
         if since:
             data["since"] = since
-        result = self._make_request(method="OHLC", path="/0/public/", data=data)
-        if result:
-            return [float(entry[4]) for entry in result.get(pair, [])]
+
+        try:
+            result = self._make_request(method="OHLC", path="/0/public/", data=data)
+        except Exception as e:
+            logger.error(f"Failed to fetch historical prices due to exception: {e}")
+            return []
+
+        if result and pair in result:
+            try:
+                return [float(entry[4]) for entry in result.get(pair, []) if len(entry) > 4]
+            except ValueError as ve:
+                logger.error(f"Error converting entry to float: {ve}")
+                return []
+
+        logger.warning(f"No data found for pair {pair} or unexpected response format.")
         return []
 
     def execute_trade(self, volume: float, side: str, price: Optional[float] = None) -> None:
