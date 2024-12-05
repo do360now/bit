@@ -40,10 +40,10 @@ class AdvancedTradingStrategy:
         """Calculate adaptive trading thresholds based on recent price volatility."""
         if len(self.prices) < 30:
             return {
-                'buy_rsi_threshold': 40,
-                'sell_rsi_threshold': 60,
-                'stop_loss_percent': 0.05,
-                'take_profit_percent': 0.10
+                'buy_rsi_threshold': 50,  # Increased to favor more frequent buying
+                'sell_rsi_threshold': 75,  # Increased to favor holding longer before selling
+                'stop_loss_percent': 0.10,  # Wider stop-loss to avoid selling on minor dips
+                'take_profit_percent': 0.10  # Higher profit threshold to avoid frequent profit-taking
             }
         
         # Calculate price volatility
@@ -53,10 +53,10 @@ class AdvancedTradingStrategy:
         
         # Adaptive thresholds
         thresholds = {
-            'buy_rsi_threshold': max(30, 40 * (1 - volatility_ratio)),
-            'sell_rsi_threshold': min(70, 60 * (1 + volatility_ratio)),
-            'stop_loss_percent': max(0.03, min(0.10, volatility_ratio * 2)),
-            'take_profit_percent': max(0.05, min(0.20, volatility_ratio * 3))
+            'buy_rsi_threshold': max(50, 40 * (1 - volatility_ratio)),  # Adjusted to favor buying
+            'sell_rsi_threshold': min(80, 60 * (1 + volatility_ratio)),  # Adjusted to favor holding
+            'stop_loss_percent': max(0.05, min(0.10, volatility_ratio * 2)),
+            'take_profit_percent': max(0.10, min(0.30, volatility_ratio * 3))  # Higher profit threshold
         }
         
         return thresholds
@@ -77,7 +77,6 @@ class AdvancedTradingStrategy:
         thresholds = self._calculate_dynamic_thresholds()
         logger.info(f"Dynamic thresholds: {thresholds}")
 
-        
         # Calculate RSI
         rsi = calculate_rsi(self.prices)
         logger.info(f"RSI: {rsi}")
@@ -113,7 +112,6 @@ class AdvancedTradingStrategy:
             "thresholds": thresholds,
         }
 
-
     def _determine_trade_action(self, current_price, macd, signal, rsi, thresholds):
         current_time = time.time()
 
@@ -142,6 +140,7 @@ class AdvancedTradingStrategy:
                 self._execute_sell(current_price, "Take Profit Triggered")
                 return
 
+        # Buy or Sell Decision
         if not self.last_trade_price:
             logger.info(colored(f"No trade executed. Conditions not met: MACD ({macd}) > Signal ({signal}), RSI ({rsi}) within thresholds.", "yellow"))
 
@@ -176,7 +175,6 @@ class AdvancedTradingStrategy:
         else:
             logger.info(colored(f"Sell conditions not met: MACD ({macd}), Signal ({signal}), RSI ({rsi}), Current Price ({current_price}), Moving Average ({moving_avg})", "yellow"))
 
-
     def _execute_buy(self, current_price):
         """Execute buy with enhanced logging and tracking."""
         trading_amount = portfolio.portfolio['TRADING']
@@ -185,22 +183,25 @@ class AdvancedTradingStrategy:
         limit_price = round(current_price * 0.999, 1)  # Set a limit order 0.1% below the current market price
         logger.info(f"Buy Signal: Target Limit Price={limit_price}, Trading Amount={trading_amount}")
         try:
-            self.kraken_api.execute_trade(trading_amount, 'buy', price=limit_price)
+            if trading_amount > MIN_TRADE_VOLUME:
+                self.kraken_api.execute_trade(trading_amount, 'buy', price=limit_price)
 
-            # Update tracking
-            self.last_trade_price = limit_price
-            self.last_trade_type = 'buy'
-            self.total_trades += 1
-            self.trade_history.append({
-                'type': 'buy', 
-                'price': limit_price, 
-                'timestamp': time.time()
-            })
+                # Update tracking
+                self.last_trade_price = limit_price
+                self.last_trade_type = 'buy'
+                self.total_trades += 1
+                self.trade_history.append({
+                    'type': 'buy', 
+                    'price': limit_price, 
+                    'timestamp': time.time()
+                })
 
-            logger.info(colored(f"Buy executed successfully at Limit Price={limit_price}", "green"))
+                logger.info(colored(f"Buy executed successfully at Limit Price={limit_price}", "green"))
 
-            # Set cooldown
-            self.cooldown_end_time = time.time() + 300
+                # Set cooldown to 1 hour
+                self.cooldown_end_time = time.time() + 3600
+            else:
+                logger.error("Insufficient funds for buying.")
 
         except Exception as e:
             logger.error(f"Buy execution failed: {e}")
@@ -213,30 +214,33 @@ class AdvancedTradingStrategy:
         limit_price = round(current_price * 1.001, 1)  # Set a limit order 0.1% above the current market price
         logger.info(colored(f"Sell Signal: Target Limit Price={limit_price}, Reason={reason}, Trading Amount={trading_amount}", "red"))
         try:
-            self.kraken_api.execute_trade(trading_amount, 'sell', price=limit_price)
+            if trading_amount > MIN_TRADE_VOLUME:
+                self.kraken_api.execute_trade(trading_amount, 'sell', price=limit_price)
 
-            # Update tracking
-            if self.last_trade_price:
-                profit_loss = calculate_potential_profit_loss(
-                    limit_price, 
-                    self.last_trade_price
-                )
-                if profit_loss > 0:
-                    self.profitable_trades += 1
-                logger.info(f"Sell executed successfully at Limit Price={limit_price} with Profit/Loss={profit_loss}")
+                # Update tracking
+                if self.last_trade_price:
+                    profit_loss = calculate_potential_profit_loss(
+                        limit_price, 
+                        self.last_trade_price
+                    )
+                    if profit_loss > 0:
+                        self.profitable_trades += 1
+                    logger.info(f"Sell executed successfully at Limit Price={limit_price} with Profit/Loss={profit_loss}")
 
-            self.last_trade_price = limit_price
-            self.last_trade_type = 'sell'
-            self.total_trades += 1
-            self.trade_history.append({
-                'type': 'sell', 
-                'price': limit_price, 
-                'timestamp': time.time(),
-                'reason': reason
-            })
+                self.last_trade_price = limit_price
+                self.last_trade_type = 'sell'
+                self.total_trades += 1
+                self.trade_history.append({
+                    'type': 'sell', 
+                    'price': limit_price, 
+                    'timestamp': time.time(),
+                    'reason': reason
+                })
 
-            # Set cooldown
-            self.cooldown_end_time = time.time() + 300
+                # Set cooldown to 1 hour
+                self.cooldown_end_time = time.time() + 3600
+            else:
+                logger.error("Insufficient funds for selling.")
 
         except Exception as e:
             logger.error(f"Sell execution failed: {e}")
