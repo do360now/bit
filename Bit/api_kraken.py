@@ -179,6 +179,19 @@ class KrakenAPI:
         if result:
             return result.get('open', None)
         return None
+    
+    def get_assets(self):
+        """Fetch the asset data from Kraken's API."""
+        url = f"{self.api_domain}/0/public/Assets"
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            data = response.json()
+            if 'error' in data and data['error']:
+                raise ValueError(f"Kraken API error: {data['error']}")
+            return data.get('result', {})
+        except requests.RequestException as e:
+            raise ConnectionError(f"Error fetching assets: {e}")
 
 
 # Initialize the API client

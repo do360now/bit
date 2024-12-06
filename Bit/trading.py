@@ -3,6 +3,8 @@ import numpy as np
 from typing import List, Optional, Dict
 from dataclasses import dataclass
 
+
+
 from api_kraken import KrakenAPI
 from indicators import (
     calculate_moving_average, 
@@ -12,7 +14,7 @@ from indicators import (
     # Removed is_profitable_trade since it wasn't used
 )
 from portfolio import portfolio
-from config import MIN_TRADE_VOLUME, API_KEY, API_SECRET, API_DOMAIN
+from config import MIN_TRADE_VOLUME, CURRENT_PORTFOLIO_SNAPSHOT, API_KEY, API_SECRET, API_DOMAIN
 from logger_config import logger
 from termcolor import colored
 
@@ -28,37 +30,39 @@ class StrategyResult:
     thresholds: Dict[str, float]
 
 
-class AdvancedTradingStrategy:
-    def __init__(
-        self, 
-        prices: Optional[List[float]] = None, 
-        risk_tolerance: float = 0.02
-    ) -> None:
-        """
-        Initialize the AdvancedTradingStrategy object.
 
-        :param prices: Historical price data (list of floats). If None, starts empty.
-        :param risk_tolerance: A float representing the user's risk tolerance.
-        """
-        self.prices = prices or []
+
+class AdvancedTradingStrategy:
+    def __init__(self, prices=None, risk_tolerance=0.02):
+        # ... existing code ...
+        self.btc_baseline = CURRENT_PORTFOLIO_SNAPSHOT['BTC']['amount_btc_total']
         self.kraken_api = KrakenAPI(API_KEY, API_SECRET, API_DOMAIN)
-        
+        self.current_btc = None  # Will be set externally or via a new method
+         
+         # State tracking
+        self.last_trade_type = None
+        self.cooldown_end_time = 0  # Make sure this is here!
+
         # Enhanced risk management
         self.risk_tolerance = risk_tolerance
-        self.last_trade_price: Optional[float] = None
-        self.trade_history: List[Dict[str, float]] = []
-        
-        # Adaptive parameters
-        self.stop_loss_multiplier = 1.0
-        self.take_profit_multiplier = 1.0
-        
-        # State tracking
-        self.last_trade_type: Optional[str] = None
-        self.cooldown_end_time: float = 0
-        
-        # Performance tracking
-        self.total_trades = 0
-        self.profitable_trades = 0
+        self.last_trade_price = None
+        self.trade_history = []
+
+    def update_current_btc_holdings(self, current_btc: float):
+        self.current_btc = current_btc
+
+    def _calculate_dynamic_thresholds(self):
+        thresholds = super()._calculate_dynamic_thresholds()  # Assuming inheritance or just reuse logic
+
+        if self.current_btc is not None:
+            deviation = (self.current_btc - self.btc_baseline) / self.btc_baseline
+            # If significantly below baseline, attempt to accumulate more BTC
+            if deviation < -0.1:  # 10% below baseline
+                thresholds['buy_rsi_threshold'] = max(30, thresholds['buy_rsi_threshold'] - 5)
+                logger.info("Below BTC baseline by more than 10%. Lowering buy RSI threshold to accumulate more BTC.")
+
+        return thresholds
+
 
     def _calculate_dynamic_thresholds(self) -> Dict[str, float]:
         """
