@@ -12,7 +12,7 @@ run_bit:
 
 docker_build:
 	@echo "Building docker image..."
-	@docker build -t kraken-trading-claude-bot:0.1.5 .
+	@docker build -t kraken-trading-claude-bot:0.2.0 .
 
 deployment: docker_build
 	@echo "Deploying agents..."

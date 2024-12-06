@@ -1,127 +1,180 @@
 import time
 import numpy as np
-from typing import List, Optional
+from typing import List, Optional, Dict
+from dataclasses import dataclass
+
 from api_kraken import KrakenAPI
 from indicators import (
     calculate_moving_average, 
     calculate_rsi, 
     calculate_macd, 
-    calculate_potential_profit_loss, 
-    is_profitable_trade
+    calculate_potential_profit_loss
+    # Removed is_profitable_trade since it wasn't used
 )
 from portfolio import portfolio
 from config import MIN_TRADE_VOLUME, API_KEY, API_SECRET, API_DOMAIN
 from logger_config import logger
 from termcolor import colored
 
+
+@dataclass
+class StrategyResult:
+    """Dataclass to hold the result of the strategy execution."""
+    current_price: float
+    rsi: float
+    macd: float
+    signal: float
+    histogram: float
+    thresholds: Dict[str, float]
+
+
 class AdvancedTradingStrategy:
-    def __init__(self, prices: Optional[List[float]] = None, risk_tolerance: float = 0.02):
+    def __init__(
+        self, 
+        prices: Optional[List[float]] = None, 
+        risk_tolerance: float = 0.02
+    ) -> None:
+        """
+        Initialize the AdvancedTradingStrategy object.
+
+        :param prices: Historical price data (list of floats). If None, starts empty.
+        :param risk_tolerance: A float representing the user's risk tolerance.
+        """
         self.prices = prices or []
         self.kraken_api = KrakenAPI(API_KEY, API_SECRET, API_DOMAIN)
         
         # Enhanced risk management
         self.risk_tolerance = risk_tolerance
-        self.last_trade_price = None
-        self.trade_history = []
+        self.last_trade_price: Optional[float] = None
+        self.trade_history: List[Dict[str, float]] = []
         
         # Adaptive parameters
         self.stop_loss_multiplier = 1.0
         self.take_profit_multiplier = 1.0
         
         # State tracking
-        self.last_trade_type = None
-        self.cooldown_end_time = 0
+        self.last_trade_type: Optional[str] = None
+        self.cooldown_end_time: float = 0
         
         # Performance tracking
         self.total_trades = 0
         self.profitable_trades = 0
 
-    def _calculate_dynamic_thresholds(self):
-        """Calculate adaptive trading thresholds based on recent price volatility."""
+    def _calculate_dynamic_thresholds(self) -> Dict[str, float]:
+        """
+        Calculate adaptive trading thresholds based on recent price volatility.
+
+        :return: A dictionary containing buy_rsi_threshold, sell_rsi_threshold,
+                 stop_loss_percent, and take_profit_percent.
+        """
+        logger.debug("Calculating dynamic thresholds based on price volatility.")
         if len(self.prices) < 30:
             return {
-                'buy_rsi_threshold': 50,  # Increased to favor more frequent buying
-                'sell_rsi_threshold': 75,  # Increased to favor holding longer before selling
-                'stop_loss_percent': 0.10,  # Wider stop-loss to avoid selling on minor dips
-                'take_profit_percent': 0.10  # Higher profit threshold to avoid frequent profit-taking
+                'buy_rsi_threshold': 50, 
+                'sell_rsi_threshold': 75,
+                'stop_loss_percent': 0.10, 
+                'take_profit_percent': 0.10
             }
         
         # Calculate price volatility
-        price_std = np.std(self.prices[-30:])
-        price_mean = np.mean(self.prices[-30:])
+        recent_prices = self.prices[-30:]
+        price_std = np.std(recent_prices)
+        price_mean = np.mean(recent_prices) if np.mean(recent_prices) != 0 else 1.0
         volatility_ratio = price_std / price_mean
         
         # Adaptive thresholds
         thresholds = {
-            'buy_rsi_threshold': max(50, 40 * (1 - volatility_ratio)),  # Adjusted to favor buying
-            'sell_rsi_threshold': min(80, 60 * (1 + volatility_ratio)),  # Adjusted to favor holding
+            'buy_rsi_threshold': max(50, 40 * (1 - volatility_ratio)),  
+            'sell_rsi_threshold': min(80, 60 * (1 + volatility_ratio)),  
             'stop_loss_percent': max(0.05, min(0.10, volatility_ratio * 2)),
-            'take_profit_percent': max(0.10, min(0.30, volatility_ratio * 3))  # Higher profit threshold
+            'take_profit_percent': max(0.10, min(0.30, volatility_ratio * 3))
         }
         
         return thresholds
 
-    def execute_strategy(self):
+    def execute_strategy(self) -> Optional[StrategyResult]:
+        """
+        Execute the trading strategy:
+        1. Retrieve current price.
+        2. Update historical prices.
+        3. Calculate trading indicators (RSI, MACD, etc.).
+        4. Determine buy/sell/hold action.
+
+        :return: StrategyResult object containing current metrics if successful, else None.
+        """
+        logger.debug("Executing trading strategy.")
         # Retrieve current price
         current_price = self.kraken_api.get_btc_price()
-        logger.info(f"Current BTC price: {current_price}")
         if current_price is None:
             logger.error("Failed to retrieve BTC price.")
-            return
+            return None
+
+        logger.info(f"Current BTC price: {current_price}")
 
         # Maintain price history
         self.prices.append(current_price)
         self.prices = self.prices[-300:]  # Keep last 300 prices
 
-        # Calculate indicators
+        # Calculate indicators and thresholds
         thresholds = self._calculate_dynamic_thresholds()
         logger.info(f"Dynamic thresholds: {thresholds}")
 
         # Calculate RSI
         rsi = calculate_rsi(self.prices)
-        logger.info(f"RSI: {rsi}")
         if rsi is None:
             logger.error("RSI calculation failed due to insufficient data.")
-            return  # Exit early if RSI cannot be calculated
+            return None
+        logger.info(f"RSI: {rsi}")
 
         # Calculate MACD
         macd_data = calculate_macd(self.prices)
         if macd_data is None:
             logger.error("MACD calculation failed due to insufficient data.")
-            return  # Exit early if MACD cannot be calculated
-        else:
-            macd, signal, histogram = macd_data
-            logger.info(f"MACD: {macd}, Signal: {signal}, Histogram: {histogram}")
+            return None
+        macd, signal, histogram = macd_data
+        logger.info(f"MACD: {macd}, Signal: {signal}, Histogram: {histogram}")
 
-        # Now all indicators are properly initialized and valid
-        self._determine_trade_action(
-            current_price,
-            macd,
-            signal,
-            rsi,
-            thresholds
+        # Determine trade action
+        self._determine_trade_action(current_price, macd, signal, rsi, thresholds)
+
+        # Return structured result
+        return StrategyResult(
+            current_price=current_price,
+            rsi=rsi,
+            macd=macd,
+            signal=signal,
+            histogram=histogram,
+            thresholds=thresholds
         )
 
-        # Optionally, you could return some status or result
-        return {
-            "current_price": current_price,
-            "rsi": rsi,
-            "macd": macd,
-            "signal": signal,
-            "histogram": histogram,
-            "thresholds": thresholds,
-        }
+    def _determine_trade_action(
+        self, 
+        current_price: float, 
+        macd: float, 
+        signal: float, 
+        rsi: float, 
+        thresholds: Dict[str, float]
+    ) -> None:
+        """
+        Determine and execute the appropriate trade action based on 
+        current indicators and thresholds.
 
-    def _determine_trade_action(self, current_price, macd, signal, rsi, thresholds):
+        :param current_price: The current BTC price.
+        :param macd: MACD value.
+        :param signal: MACD signal line value.
+        :param rsi: Current RSI value.
+        :param thresholds: Threshold parameters dict.
+        """
+        logger.debug("Determining trade action based on indicators.")
         current_time = time.time()
 
-        # Check cooldown and existing position
+        # Check cooldown period
         if current_time < self.cooldown_end_time:
             logger.info("In cooldown period, skipping trade action.")
             return
 
-        # Check existing position profit/loss if applicable
-        if self.last_trade_price:
+        # If there's an open position (indicated by last_trade_price), evaluate stop loss / take profit
+        if self.last_trade_price is not None:
             potential_profit_loss = calculate_potential_profit_loss(
                 current_price, 
                 self.last_trade_price
@@ -140,53 +193,70 @@ class AdvancedTradingStrategy:
                 self._execute_sell(current_price, "Take Profit Triggered")
                 return
 
-        # Buy or Sell Decision
-        if not self.last_trade_price:
-            logger.info(colored(f"No trade executed. Conditions not met: MACD ({macd}) > Signal ({signal}), RSI ({rsi}) within thresholds.", "yellow"))
+        # If no position yet, just log the conditions
+        if self.last_trade_price is None:
+            logger.info(colored(
+                f"No existing position. Checking for potential buy/sell signals.",
+                "yellow"
+            ))
 
         # Calculate moving average
         moving_avg = calculate_moving_average(self.prices)
-        logger.info(f"Moving Average: {moving_avg}")
         if moving_avg is None:
             logger.error(colored("Moving average calculation failed due to insufficient data.", "red"))
             return
-        macd = float(macd)
-        signal = float(signal)
-        rsi = float(rsi)
-        moving_avg = float(moving_avg)
-
-        # Buy signal: More nuanced conditions
-        if (macd > signal and 
-            rsi < thresholds['buy_rsi_threshold'] and 
-            current_price > moving_avg):
-            logger.info(colored(f"Buy conditions met: MACD ({macd}) > Signal ({signal}), RSI ({rsi}) < Buy Threshold ({thresholds['buy_rsi_threshold']}), Current Price ({current_price}) > Moving Average ({moving_avg})", "green"))
-            self._execute_buy(current_price)
-            logger.info(colored("Buy Signal Triggered", "green"))
-        else:
-            logger.info(colored(f"Buy conditions not met: MACD ({macd}), Signal ({signal}), RSI ({rsi}), Current Price ({current_price}), Moving Average ({moving_avg})", "yellow"))
         
-        # Sell signal: More nuanced conditions
-        if (macd < signal and 
-            rsi > thresholds['sell_rsi_threshold'] and 
-            current_price < moving_avg):
-            logger.info(colored(f"Sell conditions met: MACD ({macd}) < Signal ({signal}), RSI ({rsi}) > Sell Threshold ({thresholds['sell_rsi_threshold']}), Current Price ({current_price}) < Moving Average ({moving_avg})", "red"))
-            self._execute_sell(current_price, "Technical Sell Signal")
-            logger.info(colored("Sell Signal Triggered", "red"))
-        else:
-            logger.info(colored(f"Sell conditions not met: MACD ({macd}), Signal ({signal}), RSI ({rsi}), Current Price ({current_price}), Moving Average ({moving_avg})", "yellow"))
+        logger.info(f"Moving Average: {moving_avg}")
 
-    def _execute_buy(self, current_price):
-        """Execute buy with enhanced logging and tracking."""
+        # Buy signal conditions
+        if (float(macd) > float(signal) and 
+            float(rsi) < thresholds['buy_rsi_threshold'] and 
+            current_price > float(moving_avg)):
+            logger.info(colored(
+                f"Buy conditions met: MACD ({macd}) > Signal ({signal}), "
+                f"RSI ({rsi}) < Buy Threshold ({thresholds['buy_rsi_threshold']}), "
+                f"Current Price ({current_price}) > Moving Average ({moving_avg})", 
+                "green"
+            ))
+            self._execute_buy(current_price)
+        else:
+            logger.debug(
+                f"Buy conditions not met: MACD ({macd}), Signal ({signal}), RSI ({rsi}), "
+                f"Current Price ({current_price}), Moving Average ({moving_avg})"
+            )
+        
+        # Sell signal conditions
+        if (float(macd) < float(signal) and 
+            float(rsi) > thresholds['sell_rsi_threshold'] and 
+            current_price < float(moving_avg)):
+            logger.info(colored(
+                f"Sell conditions met: MACD ({macd}) < Signal ({signal}), "
+                f"RSI ({rsi}) > Sell Threshold ({thresholds['sell_rsi_threshold']}), "
+                f"Current Price ({current_price}) < Moving Average ({moving_avg})", 
+                "red"
+            ))
+            self._execute_sell(current_price, "Technical Sell Signal")
+        else:
+            logger.debug(
+                f"Sell conditions not met: MACD ({macd}), Signal ({signal}), RSI ({rsi}), "
+                f"Current Price ({current_price}), Moving Average ({moving_avg})"
+            )
+
+    def _execute_buy(self, current_price: float) -> None:
+        """
+        Execute a buy order with enhanced logging and tracking.
+        
+        :param current_price: The current market price to base the limit order on.
+        """
+        logger.debug("Preparing to execute buy order.")
         trading_amount = portfolio.portfolio['TRADING']
 
-        # Add a limit buffer to try and buy at a lower price
-        limit_price = round(current_price * 0.999, 1)  # Set a limit order 0.1% below the current market price
+        # Set a limit order slightly below the current price
+        limit_price = round(current_price * 0.999, 1)
         logger.info(f"Buy Signal: Target Limit Price={limit_price}, Trading Amount={trading_amount}")
         try:
             if trading_amount > MIN_TRADE_VOLUME:
                 self.kraken_api.execute_trade(trading_amount, 'buy', price=limit_price)
-
-                # Update tracking
                 self.last_trade_price = limit_price
                 self.last_trade_type = 'buy'
                 self.total_trades += 1
@@ -197,32 +267,31 @@ class AdvancedTradingStrategy:
                 })
 
                 logger.info(colored(f"Buy executed successfully at Limit Price={limit_price}", "green"))
-
-                # Set cooldown to 1 hour
-                self.cooldown_end_time = time.time() + 3600
+                self.cooldown_end_time = time.time() + 3600  # 1 hour cooldown
             else:
                 logger.error("Insufficient funds for buying.")
-
         except Exception as e:
             logger.error(f"Buy execution failed: {e}")
 
-    def _execute_sell(self, current_price, reason):
-        """Execute sell with enhanced logging and tracking."""
+    def _execute_sell(self, current_price: float, reason: str) -> None:
+        """
+        Execute a sell order with enhanced logging and tracking.
+        
+        :param current_price: The current market price to base the limit order on.
+        :param reason: A string indicating why the sell was executed (e.g., "Stop Loss Triggered").
+        """
+        logger.debug("Preparing to execute sell order.")
         trading_amount = portfolio.portfolio['TRADING']
 
-        # Add a limit buffer to try and sell at a higher price
-        limit_price = round(current_price * 1.001, 1)  # Set a limit order 0.1% above the current market price
+        # Set a limit order slightly above the current price
+        limit_price = round(current_price * 1.001, 1)
         logger.info(colored(f"Sell Signal: Target Limit Price={limit_price}, Reason={reason}, Trading Amount={trading_amount}", "red"))
         try:
             if trading_amount > MIN_TRADE_VOLUME:
                 self.kraken_api.execute_trade(trading_amount, 'sell', price=limit_price)
 
-                # Update tracking
-                if self.last_trade_price:
-                    profit_loss = calculate_potential_profit_loss(
-                        limit_price, 
-                        self.last_trade_price
-                    )
+                if self.last_trade_price is not None:
+                    profit_loss = calculate_potential_profit_loss(limit_price, self.last_trade_price)
                     if profit_loss > 0:
                         self.profitable_trades += 1
                     logger.info(f"Sell executed successfully at Limit Price={limit_price} with Profit/Loss={profit_loss}")
@@ -237,17 +306,23 @@ class AdvancedTradingStrategy:
                     'reason': reason
                 })
 
-                # Set cooldown to 1 hour
-                self.cooldown_end_time = time.time() + 3600
+                self.cooldown_end_time = time.time() + 3600  # 1 hour cooldown
             else:
                 logger.error("Insufficient funds for selling.")
-
         except Exception as e:
             logger.error(f"Sell execution failed: {e}")
+
 
 # Initialize strategy
 trading_strategy_instance = AdvancedTradingStrategy()
 
-def trading_strategy(prices: List[float]):
+def trading_strategy(prices: List[float]) -> Optional[StrategyResult]:
+    """
+    Public interface to run the trading strategy with given prices.
+    
+    :param prices: A list of historical prices to seed the strategy.
+    :return: An optional StrategyResult object from the strategy execution.
+    """
+    logger.debug("Running trading_strategy function.")
     trading_strategy_instance.prices = prices
-    trading_strategy_instance.execute_strategy()
+    return trading_strategy_instance.execute_strategy()
