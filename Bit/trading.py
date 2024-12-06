@@ -113,7 +113,7 @@ class AdvancedTradingStrategy:
             logger.error("Failed to retrieve BTC price.")
             return None
 
-        logger.info(f"Current BTC price: {current_price}EUR")
+        logger.info(f"Current BTC price: {current_price} EUR")
 
         # Maintain price history
         self.prices.append(current_price)
