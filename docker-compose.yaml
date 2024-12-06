@@ -5,7 +5,7 @@ services:
   #   command: python main.py  # Replace with your app's entry point
 
   trading-bot-b:
-    image: kraken-trading-claude-bot:0.2.2  # Replace with the correct image tag
+    image: kraken-trading-claude-bot:0.2.3  # Replace with the correct image tag
     container_name: kraken-trading-claude-bot
     # depends_on:
     #   - trading-bot-a

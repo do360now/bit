@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 
+
 # Load environment variables from .env
 load_dotenv()
 
@@ -19,8 +20,7 @@ ALLOCATIONS = {
     'TRADING': float(os.getenv("ALLOC_TRADING", 0.15)),
 }
 
-# Initial BTC balance
-TOTAL_BTC = float(os.getenv("TOTAL_BTC", 0.00368))
+TOTAL_BTC = 0.0045462752
 
 # Minimum trading volume to avoid very small trades
 MIN_TRADE_VOLUME = float(os.getenv("MIN_TRADE_VOLUME", 0.00015))
@@ -37,12 +37,11 @@ CURRENT_PORTFOLIO_SNAPSHOT = {
     'BTC': {
         'percentage': 0.1340,
         'price_eur': 92757.60,
-        'amount_btc_total': 0.00368,
-        'primary_btc': 0.00368 * 0.8,  # 0.002944 BTC
-        'secondary_btc': 0.00368 * 0.2,  # 0.000736 BTC
-        'amount_eur': 0.00368 * 92757.60  # ≈ 341.57 EUR
+        'amount_btc_total': TOTAL_BTC,
+        'primary_btc': TOTAL_BTC * 0.8,  # 80% of total BTC
+        'secondary_btc': TOTAL_BTC * 0.2,  # 20% of total BTC
+        'amount_eur': TOTAL_BTC * 92757.60  # Approximate EUR equivalent
     }
 }
-
 
 SLEEP_DURATION = 300  # 5 minutes

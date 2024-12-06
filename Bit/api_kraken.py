@@ -192,10 +192,11 @@ class KrakenAPI:
             return data.get('result', {})
         except requests.RequestException as e:
             raise ConnectionError(f"Error fetching assets: {e}")
-
+        
 
 # Initialize the API client
 kraken_api = KrakenAPI(API_KEY, API_SECRET, API_DOMAIN)
+
 
 if __name__ == "__main__":
     # Example usage, can be removed or commented out in production

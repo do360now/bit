@@ -47,6 +47,18 @@ class AdvancedTradingStrategy:
         self.risk_tolerance = risk_tolerance
         self.last_trade_price = None
         self.trade_history = []
+                
+        # Adaptive parameters
+        self.stop_loss_multiplier = 1.0
+        self.take_profit_multiplier = 1.0
+
+        # State tracking
+        self.last_trade_type = None
+        self.cooldown_end_time = 0
+
+        # Performance tracking
+        self.total_trades = 0
+        self.profitable_trades = 0  # Ensure this is defined!
 
     def update_current_btc_holdings(self, current_btc: float):
         self.current_btc = current_btc
@@ -272,6 +284,7 @@ class AdvancedTradingStrategy:
 
                 logger.info(colored(f"Buy executed successfully at Limit Price={limit_price}", "green"))
                 self.cooldown_end_time = time.time() + 3600  # 1 hour cooldown
+                return trading_amount
             else:
                 logger.error("Insufficient funds for buying.")
         except Exception as e:

@@ -1,7 +1,10 @@
 from dataclasses import dataclass, field
 from typing import Dict
-from config import ALLOCATIONS, TOTAL_BTC
+from config import ALLOCATIONS, API_KEY, API_SECRET, API_DOMAIN, ALLOCATIONS
 from logger_config import logger
+from api_kraken import KrakenAPI
+
+
 
 @dataclass
 class Portfolio:
@@ -14,12 +17,28 @@ class Portfolio:
         allocations (Dict[str, float]): A dictionary of category-to-weight mappings.
         portfolio (Dict[str, float]): A dictionary representing the actual BTC assigned to each category.
     """
-    total_btc: float = TOTAL_BTC
+    kraken_api: KrakenAPI = field(default_factory=lambda: KrakenAPI(API_KEY, API_SECRET, API_DOMAIN))
     allocations: Dict[str, float] = field(default_factory=lambda: ALLOCATIONS)
     portfolio: Dict[str, float] = field(init=False)
 
     def __post_init__(self) -> None:
+        self.total_btc = self._fetch_total_btc()
         self._initialize_portfolio()
+
+    def _fetch_total_btc(self) -> float:
+        """
+        Fetch the total BTC balance from Kraken, considering alternate keys.
+        """
+        balance = self.kraken_api.get_account_balance()
+        if balance:
+            # Attempt to find the correct BTC key
+            btc_key = next((key for key in balance if "XBT" in key), None)
+            if btc_key:
+                logger.info(f"Fetched BTC balance from Kraken: {balance[btc_key]} (key: {btc_key})")
+                return float(balance[btc_key])
+        logger.warning("Failed to fetch BTC balance. Defaulting to 0.")
+        return 0.0
+
 
     def _initialize_portfolio(self) -> None:
         """
@@ -33,11 +52,8 @@ class Portfolio:
     def rebalance(self) -> None:
         """
         Recalculate the allocation of the portfolio based on the current total BTC.
-        
-        The total BTC is updated to reflect any changes, and each category’s amount is
-        recalculated according to the pre-defined allocation weights.
         """
-        self.total_btc = sum(self.portfolio.values())
+        self.total_btc = self._fetch_total_btc()
         for category, weight in self.allocations.items():
             self.portfolio[category] = self.total_btc * weight
 
