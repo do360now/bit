@@ -8,7 +8,13 @@ from trading import trading_strategy, trading_strategy_instance
 from portfolio import rebalance_portfolio
 from api_kraken import KrakenAPI
 from logger_config import logger
-from config import CURRENT_PORTFOLIO_SNAPSHOT, API_KEY, API_SECRET, API_DOMAIN, SLEEP_DURATION
+from config import (
+    CURRENT_PORTFOLIO_SNAPSHOT,
+    API_KEY,
+    API_SECRET,
+    API_DOMAIN,
+    SLEEP_DURATION,
+)
 
 
 class PortfolioManager:
@@ -22,22 +28,22 @@ class PortfolioManager:
         """Fetch the asset key dynamically from the Kraken API."""
         asset_data = self.kraken_api.get_assets()
         for key, details in asset_data.items():
-            if details['altname'] == asset_name:
+            if details["altname"] == asset_name:
                 return key
         raise ValueError(f"Asset key for {asset_name} not found.")
 
     def load_historical_prices(self):
         """Load historical prices from a cache or fetch from API."""
-        cache_file = 'historical_prices.json'
+        cache_file = "historical_prices.json"
         try:
-            with open(cache_file, 'r') as f:
+            with open(cache_file, "r") as f:
                 self.historical_prices = json.load(f)
             logger.info(f"Loaded {len(self.historical_prices)} prices from cache.")
         except FileNotFoundError:
             logger.info("Fetching historical BTC data...")
             self.historical_prices = self.kraken_api.get_historical_prices() or []
             logger.info("Historical BTC data fetched.")
-            with open(cache_file, 'w') as f:
+            with open(cache_file, "w") as f:
                 json.dump(self.historical_prices, f)
             logger.info(f"Fetched and cached {len(self.historical_prices)} prices.")
 
@@ -54,15 +60,19 @@ class PortfolioManager:
                 logger.info(f"BTC key: {btc_key}")
                 if btc_key in account_balance:
                     self.current_btc = float(account_balance[btc_key])
-                    baseline_btc = CURRENT_PORTFOLIO_SNAPSHOT['BTC']['amount_btc_total']
+                    baseline_btc = CURRENT_PORTFOLIO_SNAPSHOT["BTC"]["amount_btc_total"]
 
                     deviation = (self.current_btc - baseline_btc) / baseline_btc * 100.0
-                    logger.info(f"Current BTC: {self.current_btc:.5f} BTC vs. Baseline: {baseline_btc:.5f} BTC")
+                    logger.info(
+                        f"Current BTC: {self.current_btc:.5f} BTC vs. Baseline: {baseline_btc:.5f} BTC"
+                    )
                     logger.info(f"Deviation from baseline: {deviation:.2f}%")
 
                     self.btc_deviation_from_baseline = deviation
                 else:
-                    logger.warning(f"BTC balance not found in account data for key {btc_key}.")
+                    logger.warning(
+                        f"BTC balance not found in account data for key {btc_key}."
+                    )
             except Exception as e:
                 logger.error(f"Error processing account balance: {e}")
         else:
@@ -77,11 +87,19 @@ class PortfolioManager:
                 rebalance_portfolio()
 
                 # Update trading strategy parameters.
-                if self.current_btc is not None and hasattr(trading_strategy_instance, "update_current_btc_holdings"):
-                    trading_strategy_instance.update_current_btc_holdings(self.current_btc)
+                if self.current_btc is not None and hasattr(
+                    trading_strategy_instance, "update_current_btc_holdings"
+                ):
+                    trading_strategy_instance.update_current_btc_holdings(
+                        self.current_btc
+                    )
 
-                if self.btc_deviation_from_baseline is not None and hasattr(trading_strategy_instance, "update_btc_deviation"):
-                    trading_strategy_instance.update_btc_deviation(self.btc_deviation_from_baseline)
+                if self.btc_deviation_from_baseline is not None and hasattr(
+                    trading_strategy_instance, "update_btc_deviation"
+                ):
+                    trading_strategy_instance.update_btc_deviation(
+                        self.btc_deviation_from_baseline
+                    )
 
                 # Run the trading strategy.
                 trading_strategy(self.historical_prices)
@@ -93,10 +111,12 @@ class PortfolioManager:
                 logger.error(f"Error during cycle {cycle_count}: {e}")
                 time.sleep(60)
 
+
 def handle_signal(sig, frame):
     """Handle termination signals for graceful shutdown."""
     logger.info("Received termination signal. Stopping the bot...")
     sys.exit(0)
+
 
 def main() -> None:
     """Entry point for the trading bot."""
@@ -118,6 +138,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    # Set a default sleep duration if not specified.
-    SLEEP_DURATION = getattr(sys.modules[__name__], "SLEEP_DURATION", 300)  # Default: 5 minutes
     main()

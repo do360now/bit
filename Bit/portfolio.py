@@ -1,9 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Dict
-from config import ALLOCATIONS, API_KEY, API_SECRET, API_DOMAIN, ALLOCATIONS
+from config import ALLOCATIONS, API_KEY, API_SECRET, API_DOMAIN
 from logger_config import logger
 from api_kraken import KrakenAPI
-
 
 
 @dataclass
@@ -17,7 +16,10 @@ class Portfolio:
         allocations (Dict[str, float]): A dictionary of category-to-weight mappings.
         portfolio (Dict[str, float]): A dictionary representing the actual BTC assigned to each category.
     """
-    kraken_api: KrakenAPI = field(default_factory=lambda: KrakenAPI(API_KEY, API_SECRET, API_DOMAIN))
+
+    kraken_api: KrakenAPI = field(
+        default_factory=lambda: KrakenAPI(API_KEY, API_SECRET, API_DOMAIN)
+    )
     allocations: Dict[str, float] = field(default_factory=lambda: ALLOCATIONS)
     portfolio: Dict[str, float] = field(init=False)
 
@@ -34,11 +36,12 @@ class Portfolio:
             # Attempt to find the correct BTC key
             btc_key = next((key for key in balance if "XBT" in key), None)
             if btc_key:
-                logger.info(f"Fetched BTC balance from Kraken: {balance[btc_key]} (key: {btc_key})")
+                logger.info(
+                    f"Fetched BTC balance from Kraken: {balance[btc_key]} (key: {btc_key})"
+                )
                 return float(balance[btc_key])
         logger.warning("Failed to fetch BTC balance. Defaulting to 0.")
         return 0.0
-
 
     def _initialize_portfolio(self) -> None:
         """
@@ -69,13 +72,17 @@ class Portfolio:
         :param amount: The BTC amount to add (or subtract if negative).
         """
         if category not in self.portfolio:
-            logger.warning(f"Category {category} not found in portfolio. Skipping update.")
+            logger.warning(
+                f"Category {category} not found in portfolio. Skipping update."
+            )
             return
         self.portfolio[category] += amount
         self.rebalance()
 
+
 # Singleton portfolio instance
 portfolio = Portfolio()
+
 
 def rebalance_portfolio() -> None:
     """

@@ -2,10 +2,9 @@ import numpy as np
 import pandas as pd
 from typing import List, Optional, Tuple, Dict
 
+
 def calculate_moving_average(
-    prices: List[float], 
-    window: int = 7, 
-    mode: str = 'simple'
+    prices: List[float], window: int = 7, mode: str = "simple"
 ) -> Optional[float]:
     """
     Calculate the moving average of a list of prices.
@@ -17,18 +16,17 @@ def calculate_moving_average(
     """
     if len(prices) < window:
         return None
-    
-    if mode == 'simple':
+
+    if mode == "simple":
         return float(np.mean(prices[-window:]))
-    elif mode == 'exponential':
+    elif mode == "exponential":
         return float(pd.Series(prices).ewm(span=window, adjust=False).mean().iloc[-1])
     else:
         raise ValueError(f"Unsupported moving average mode: {mode}")
 
+
 def calculate_rsi(
-    prices: List[float], 
-    window: int = 14, 
-    smoothing: bool = True
+    prices: List[float], window: int = 14, smoothing: bool = True
 ) -> Optional[float]:
     """
     Calculate the Relative Strength Index (RSI) for a list of prices.
@@ -63,11 +61,12 @@ def calculate_rsi(
 
     return float(100.0 - (100.0 / (1.0 + rs)))
 
+
 def calculate_macd(
-    prices: List[float], 
-    short_window: int = 12, 
-    long_window: int = 26, 
-    signal_window: int = 9
+    prices: List[float],
+    short_window: int = 12,
+    long_window: int = 26,
+    signal_window: int = 9,
 ) -> Optional[Tuple[float, float, float]]:
     """
     Calculate the MACD (Moving Average Convergence Divergence) indicator and return
@@ -81,25 +80,24 @@ def calculate_macd(
     """
     if len(prices) < long_window:
         return None
-    
+
     prices_series = pd.Series(prices)
     short_ema = prices_series.ewm(span=short_window, adjust=False).mean()
     long_ema = prices_series.ewm(span=long_window, adjust=False).mean()
-    
+
     macd_values = short_ema - long_ema
     signal_line = macd_values.ewm(span=signal_window, adjust=False).mean()
     histogram = macd_values - signal_line
-    
+
     return (
-        float(macd_values.iloc[-1]), 
-        float(signal_line.iloc[-1]), 
-        float(histogram.iloc[-1])
+        float(macd_values.iloc[-1]),
+        float(signal_line.iloc[-1]),
+        float(histogram.iloc[-1]),
     )
 
+
 def calculate_bollinger_bands(
-    prices: List[float], 
-    window: int = 20, 
-    num_std: float = 2.0
+    prices: List[float], window: int = 20, num_std: float = 2.0
 ) -> Optional[Dict[str, float]]:
     """
     Calculate Bollinger Bands for a list of prices.
@@ -111,20 +109,20 @@ def calculate_bollinger_bands(
     """
     if len(prices) < window:
         return None
-    
+
     prices_series = pd.Series(prices)
     rolling_mean = prices_series.rolling(window=window).mean()
     rolling_std = prices_series.rolling(window=window).std()
-    
+
     return {
-        'middle_band': float(rolling_mean.iloc[-1]),
-        'upper_band': float(rolling_mean.iloc[-1] + num_std * rolling_std.iloc[-1]),
-        'lower_band': float(rolling_mean.iloc[-1] - num_std * rolling_std.iloc[-1])
+        "middle_band": float(rolling_mean.iloc[-1]),
+        "upper_band": float(rolling_mean.iloc[-1] + num_std * rolling_std.iloc[-1]),
+        "lower_band": float(rolling_mean.iloc[-1] - num_std * rolling_std.iloc[-1]),
     }
 
+
 def calculate_potential_profit_loss(
-    current_price: float, 
-    previous_price: float
+    current_price: float, previous_price: float
 ) -> float:
     """
     Calculate the potential profit or loss percentage given the current and previous prices.
@@ -135,9 +133,9 @@ def calculate_potential_profit_loss(
     """
     return ((current_price - previous_price) / previous_price) * 100.0
 
+
 def is_profitable_trade(
-    potential_profit_loss: float, 
-    transaction_fee_percentage: float = 0.0026
+    potential_profit_loss: float, transaction_fee_percentage: float = 0.0026
 ) -> bool:
     """
     Determine if a trade is profitable after considering transaction fees.
