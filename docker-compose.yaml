@@ -5,8 +5,8 @@ services:
   #   command: python main.py  # Replace with your app's entry point
 
   trading-bot-b:
-    image: kraken-trading-claude-bot:0.2.3  # Replace with the correct image tag
-    container_name: kraken-trading-claude-bot
+    image: kraken-btc-trading-agent:1.0.0  # Replace with the correct image tag
+    container_name: kraken-btc-trading-agent
     # depends_on:
     #   - trading-bot-a
     # entrypoint: ["sh", "-c", "sleep 180 && python main.py"]  # 3 minute delay (180 seconds)
