@@ -1,12 +1,14 @@
-import requests
-import time
 import base64
 import hashlib
 import hmac
-from typing import Optional, List, Dict, Any
-from config import API_KEY, API_SECRET, API_DOMAIN
+import time
+from typing import Any, Dict, List, Optional
+
+import requests
+from tenacity import retry, stop_after_attempt, wait_exponential
+
+from config import API_DOMAIN, API_KEY, API_SECRET
 from logger_config import logger
-from tenacity import retry, wait_exponential, stop_after_attempt
 
 
 class KrakenAPI:

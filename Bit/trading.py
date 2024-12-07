@@ -1,28 +1,26 @@
 import time
-import numpy as np
-from typing import List, Optional, Dict
 from dataclasses import dataclass
+from typing import Dict, List, Optional
 
+import numpy as np
+from termcolor import colored
 
 from api_kraken import KrakenAPI
-from indicators import (
-    calculate_moving_average,
-    calculate_rsi,
-    calculate_macd,
-    calculate_potential_profit_loss
-    # Removed is_profitable_trade since it wasn't used
-    ,
-)
-from portfolio import portfolio
 from config import (
-    MIN_TRADE_VOLUME,
-    CURRENT_PORTFOLIO_SNAPSHOT,
+    API_DOMAIN,
     API_KEY,
     API_SECRET,
-    API_DOMAIN,
+    CURRENT_PORTFOLIO_SNAPSHOT,
+    MIN_TRADE_VOLUME,
+)
+from indicators import (
+    calculate_macd,  # Removed is_profitable_trade since it wasn't used
+    calculate_moving_average,
+    calculate_potential_profit_loss,
+    calculate_rsi,
 )
 from logger_config import logger
-from termcolor import colored
+from portfolio import portfolio
 
 
 @dataclass
@@ -64,6 +62,8 @@ class AdvancedTradingStrategy:
         # Performance tracking
         self.total_trades = 0
         self.profitable_trades = 0  # Ensure this is defined!
+
+        self.prices = prices if prices is not None else []
 
     def update_current_btc_holdings(self, current_btc: float):
         self.current_btc = current_btc
@@ -360,7 +360,7 @@ class AdvancedTradingStrategy:
 
 
 # Initialize strategy
-trading_strategy_instance = AdvancedTradingStrategy()
+TRADING_STRATEGY_INSTANCE = AdvancedTradingStrategy()
 
 
 def trading_strategy(prices: List[float]) -> Optional[StrategyResult]:
@@ -370,5 +370,5 @@ def trading_strategy(prices: List[float]) -> Optional[StrategyResult]:
     :return: An optional StrategyResult object from the strategy execution.
     """
     logger.debug("Running trading_strategy function.")
-    trading_strategy_instance.prices = prices
-    return trading_strategy_instance.execute_strategy()
+    TRADING_STRATEGY_INSTANCE.prices = prices
+    return TRADING_STRATEGY_INSTANCE.execute_strategy()

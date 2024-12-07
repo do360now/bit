@@ -1,20 +1,20 @@
+import json
+import signal
 import sys
 import time
-import signal
-import json
 from typing import List
 
-from trading import trading_strategy, trading_strategy_instance
-from portfolio import rebalance_portfolio
 from api_kraken import KrakenAPI
-from logger_config import logger
 from config import (
-    CURRENT_PORTFOLIO_SNAPSHOT,
+    API_DOMAIN,
     API_KEY,
     API_SECRET,
-    API_DOMAIN,
+    CURRENT_PORTFOLIO_SNAPSHOT,
     SLEEP_DURATION,
 )
+from logger_config import logger
+from portfolio import rebalance_portfolio
+from trading import trading_strategy, TRADING_STRATEGY_INSTANCE
 
 
 class PortfolioManager:
@@ -88,16 +88,16 @@ class PortfolioManager:
 
                 # Update trading strategy parameters.
                 if self.current_btc is not None and hasattr(
-                    trading_strategy_instance, "update_current_btc_holdings"
+                    TRADING_STRATEGY_INSTANCE, "update_current_btc_holdings"
                 ):
-                    trading_strategy_instance.update_current_btc_holdings(
+                    TRADING_STRATEGY_INSTANCE.update_current_btc_holdings(
                         self.current_btc
                     )
 
                 if self.btc_deviation_from_baseline is not None and hasattr(
-                    trading_strategy_instance, "update_btc_deviation"
+                    TRADING_STRATEGY_INSTANCE, "update_btc_deviation"
                 ):
-                    trading_strategy_instance.update_btc_deviation(
+                    TRADING_STRATEGY_INSTANCE.update_btc_deviation(
                         self.btc_deviation_from_baseline
                     )
 

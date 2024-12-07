@@ -1,8 +1,9 @@
 from dataclasses import dataclass, field
 from typing import Dict
-from config import ALLOCATIONS, API_KEY, API_SECRET, API_DOMAIN
-from logger_config import logger
+
 from api_kraken import KrakenAPI
+from config import ALLOCATIONS, API_DOMAIN, API_KEY, API_SECRET
+from logger_config import logger
 
 
 @dataclass

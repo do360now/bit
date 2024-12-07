@@ -1,6 +1,6 @@
 import logging
-from logging.handlers import RotatingFileHandler
 import os
+from logging.handlers import RotatingFileHandler
 
 # Determine the desired log level from the environment variable.
 # Defaults to INFO if not provided.

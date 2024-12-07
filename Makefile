@@ -18,12 +18,16 @@ black:
 	@black ./Bit
 	@echo "Black done."
 
-mypy:
-	@echo "Running mypy..."
-	@mypy ./Bit
-	@echo "Mypy done."
+pylint:
+	@echo "Running pylint..."
+	@pylint ./Bit
+	@echo "Pylint done."
+# mypy:
+# 	@echo "Running mypy..."
+# 	@mypy ./Bit
+# 	@echo "Mypy done."
 
-test: lint black mypy
+test: lint black pylint
 	# @echo "Running tests..."
 	# @python3 -m unittest discover -s ./Bit -p "*_test.py"
 	@echo "Tests done."
