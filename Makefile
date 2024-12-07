@@ -37,8 +37,8 @@ run_bit:
 	@python3 ./Bit/main.py >> trading.log 2>&1 &
 
 docker_build:
-	@echo "Building Kraken BTC trading docker agent image..."
-	@docker build -t kraken-btc-trading-agent:$(VERSiON) .
+	@echo "Building Kraken ETH trading docker agent image..."
+	@docker build -t kraken-eth-trading-agent:$(VERSiON) .
 
 deployment: docker_build
 	@echo "Deploying agents..."

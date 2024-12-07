@@ -21,8 +21,8 @@ class PortfolioManager:
     def __init__(self, api_key: str, api_secret: str, api_domain: str):
         self.kraken_api = KrakenAPI(api_key, api_secret, api_domain)
         self.historical_prices: List[float] = []
-        self.btc_deviation_from_baseline = None
-        self.current_btc = None
+        self.eth_deviation_from_baseline = None
+        self.current_eth = None
 
     def get_asset_key(self, asset_name: str) -> str:
         """Fetch the asset key dynamically from the Kraken API."""
@@ -40,9 +40,9 @@ class PortfolioManager:
                 self.historical_prices = json.load(f)
             logger.info(f"Loaded {len(self.historical_prices)} prices from cache.")
         except FileNotFoundError:
-            logger.info("Fetching historical BTC data...")
+            logger.info("Fetching historical ETH data...")
             self.historical_prices = self.kraken_api.get_historical_prices() or []
-            logger.info("Historical BTC data fetched.")
+            logger.info("Historical ETH data fetched.")
             with open(cache_file, "w") as f:
                 json.dump(self.historical_prices, f)
             logger.info(f"Fetched and cached {len(self.historical_prices)} prices.")
@@ -56,22 +56,22 @@ class PortfolioManager:
         logger.info(f"Account balance: {account_balance}")
         if account_balance:
             try:
-                btc_key = "XBT.F"
-                logger.info(f"BTC key: {btc_key}")
-                if btc_key in account_balance:
-                    self.current_btc = float(account_balance[btc_key])
-                    baseline_btc = CURRENT_PORTFOLIO_SNAPSHOT["BTC"]["amount_btc_total"]
+                eth_key = "ETH.F"
+                logger.info(f"ETH key: {eth_key}")
+                if eth_key in account_balance:
+                    self.current_eth = float(account_balance[eth_key])
+                    baseline_eth = CURRENT_PORTFOLIO_SNAPSHOT["ETH"]["amount_eth_total"]
 
-                    deviation = (self.current_btc - baseline_btc) / baseline_btc * 100.0
+                    deviation = (self.current_eth - baseline_eth) / baseline_eth * 100.0
                     logger.info(
-                        f"Current BTC: {self.current_btc:.5f} BTC vs. Baseline: {baseline_btc:.5f} BTC"
+                        f"Current ETH: {self.current_eth:.5f} ETH vs. Baseline: {baseline_eth:.5f} ETH"
                     )
                     logger.info(f"Deviation from baseline: {deviation:.2f}%")
 
-                    self.btc_deviation_from_baseline = deviation
+                    self.eth_deviation_from_baseline = deviation
                 else:
                     logger.warning(
-                        f"BTC balance not found in account data for key {btc_key}."
+                        f"ETH balance not found in account data for key {eth_key}."
                     )
             except Exception as e:
                 logger.error(f"Error processing account balance: {e}")
@@ -87,18 +87,18 @@ class PortfolioManager:
                 rebalance_portfolio()
 
                 # Update trading strategy parameters.
-                if self.current_btc is not None and hasattr(
-                    TRADING_STRATEGY_INSTANCE, "update_current_btc_holdings"
+                if self.current_eth is not None and hasattr(
+                    TRADING_STRATEGY_INSTANCE, "update_current_eth_holdings"
                 ):
-                    TRADING_STRATEGY_INSTANCE.update_current_btc_holdings(
-                        self.current_btc
+                    TRADING_STRATEGY_INSTANCE.update_current_eth_holdings(
+                        self.current_eth
                     )
 
-                if self.btc_deviation_from_baseline is not None and hasattr(
-                    TRADING_STRATEGY_INSTANCE, "update_btc_deviation"
+                if self.eth_deviation_from_baseline is not None and hasattr(
+                    TRADING_STRATEGY_INSTANCE, "update_eth_deviation"
                 ):
-                    TRADING_STRATEGY_INSTANCE.update_btc_deviation(
-                        self.btc_deviation_from_baseline
+                    TRADING_STRATEGY_INSTANCE.update_eth_deviation(
+                        self.eth_deviation_from_baseline
                     )
 
                 # Run the trading strategy.

@@ -95,30 +95,30 @@ class KrakenAPI:
             logger.error(f"API call failed ({error})")
             return None
 
-    def get_btc_price(self) -> Optional[float]:
+    def get_eth_price(self) -> Optional[float]:
         """
-        Retrieve the current BTC price from Kraken.
+        Retrieve the current ETH price from Kraken.
 
-        :return: The current BTC/EUR price as a float, or None if retrieval fails.
+        :return: The current ETH/EUR price as a float, or None if retrieval fails.
         """
         result = self._make_request(
-            method="Ticker", path="/0/public/", data={"pair": "XXBTZEUR"}
+            method="Ticker", path="/0/public/", data={"pair": "XETHZUSD"}
         )
-        if result and "XXBTZEUR" in result and "c" in result["XXBTZEUR"]:
+        if result and "XETHZUSD" in result and "c" in result["XETHZUSD"]:
             try:
-                return float(result["XXBTZEUR"]["c"][0])
+                return float(result["XETHZUSD"]["c"][0])
             except (ValueError, KeyError, IndexError) as e:
-                logger.error(f"Failed to parse BTC price: {e}")
+                logger.error(f"Failed to parse ETH price: {e}")
                 return None
         return None
 
     def get_historical_prices(
-        self, pair: str = "XXBTZEUR", interval: int = 60, since: Optional[int] = None
+        self, pair: str = "XETHZUSD", interval: int = 60, since: Optional[int] = None
     ) -> List[float]:
         """
         Fetch historical OHLC prices for a trading pair.
 
-        :param pair: Trading pair, e.g., 'XXBTZEUR'.
+        :param pair: Trading pair, e.g., 'XETHZUSD'.
         :param interval: Interval in minutes for OHLC data.
         :param since: Optional Unix timestamp to fetch data from.
         :return: A list of close prices.
@@ -151,12 +151,12 @@ class KrakenAPI:
         """
         Execute a trade (buy or sell) on Kraken.
 
-        :param volume: The amount of BTC to buy or sell.
+        :param volume: The amount of ETH to buy or sell.
         :param side: 'buy' or 'sell'.
         :param price: Optional price for a limit order. If None, a market order is placed.
         """
         data: Dict[str, Any] = {
-            "pair": "XXBTZEUR",
+            "pair": "XETHZUSD",
             "type": side,
             "ordertype": "limit" if price else "market",
             "volume": volume,
@@ -169,7 +169,7 @@ class KrakenAPI:
         )
         if result:
             logger.info(
-                f"Executed {side} order for {volume} BTC at {price or 'market price'}. Order response: {result}"
+                f"Executed {side} order for {volume} ETH at {price or 'market price'}. Order response: {result}"
             )
 
     def get_account_balance(self) -> Optional[Dict[str, float]]:
@@ -219,6 +219,6 @@ kraken_api = KrakenAPI(API_KEY, API_SECRET, API_DOMAIN)
 
 if __name__ == "__main__":
     # Example usage, can be removed or commented out in production
-    btc_price = kraken_api.get_btc_price()
-    if btc_price:
-        logger.info(f"Current BTC price: {btc_price}")
+    eth_price = kraken_api.get_eth_price()
+    if eth_price:
+        logger.info(f"Current ETH price: {eth_price}")

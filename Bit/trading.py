@@ -38,9 +38,9 @@ class StrategyResult:
 class AdvancedTradingStrategy:
     def __init__(self, prices=None, risk_tolerance=0.02):
         # ... existing code ...
-        self.btc_baseline = CURRENT_PORTFOLIO_SNAPSHOT["BTC"]["amount_btc_total"]
+        self.eth_baseline = CURRENT_PORTFOLIO_SNAPSHOT["ETH"]["amount_eth_total"]
         self.kraken_api = KrakenAPI(API_KEY, API_SECRET, API_DOMAIN)
-        self.current_btc = None  # Will be set externally or via a new method
+        self.current_eth = None  # Will be set externally or via a new method
 
         # State tracking
         self.last_trade_type = None
@@ -65,8 +65,8 @@ class AdvancedTradingStrategy:
 
         self.prices = prices if prices is not None else []
 
-    def update_current_btc_holdings(self, current_btc: float):
-        self.current_btc = current_btc
+    def update_current_eth_holdings(self, current_eth: float):
+        self.current_eth = current_eth
 
     def _calculate_dynamic_thresholds(self) -> Dict[str, float]:
         """
@@ -112,12 +112,12 @@ class AdvancedTradingStrategy:
         """
         logger.debug("Executing trading strategy.")
         # Retrieve current price
-        current_price = self.kraken_api.get_btc_price()
+        current_price = self.kraken_api.get_eth_price()
         if current_price is None:
-            logger.error("Failed to retrieve BTC price.")
+            logger.error("Failed to retrieve ETH price.")
             return None
 
-        logger.info(f"Current BTC price: {current_price} EUR")
+        logger.info(f"Current ETH price: {current_price} USD")
 
         # Maintain price history
         self.prices.append(current_price)
@@ -167,7 +167,7 @@ class AdvancedTradingStrategy:
         Determine and execute the appropriate trade action based on
         current indicators and thresholds.
 
-        :param current_price: The current BTC price.
+        :param current_price: The current ETH price.
         :param macd: MACD value.
         :param signal: MACD signal line value.
         :param rsi: Current RSI value.

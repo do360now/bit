@@ -22,7 +22,7 @@ ALLOCATIONS = {
     "TRADING": float(os.getenv("ALLOC_TRADING", 0.15)),
 }
 
-TOTAL_BTC = 0.0045462752
+TOTAL_ETH = 0.01427  # Total ETH balance in the portfolio
 
 # Minimum trading volume to avoid very small trades
 MIN_TRADE_VOLUME = float(os.getenv("MIN_TRADE_VOLUME", 0.00015))
@@ -33,13 +33,13 @@ GLOBAL_TRADE_COOLDOWN = int(os.getenv("GLOBAL_TRADE_COOLDOWN", 900))
 # Current Portfolio Snapshot (for reference)
 CURRENT_PORTFOLIO_SNAPSHOT = {
     "EUR": {"percentage": 0.5770, "amount_eur": 1218.04},  # Assumed unchanged
-    "BTC": {
+    "ETH": {
         "percentage": 0.1340,
         "price_eur": 92757.60,
-        "amount_btc_total": TOTAL_BTC,
-        "primary_btc": TOTAL_BTC * 0.8,  # 80% of total BTC
-        "secondary_btc": TOTAL_BTC * 0.2,  # 20% of total BTC
-        "amount_eur": TOTAL_BTC * 92757.60,  # Approximate EUR equivalent
+        "amount_eth_total": TOTAL_ETH,
+        "primary_eth": TOTAL_ETH * 0.8,  # 80% of total ETH
+        "secondary_eth": TOTAL_ETH * 0.2,  # 20% of total ETH
+        "amount_eur": TOTAL_ETH * 92757.60,  # Approximate EUR equivalent
     },
 }
 

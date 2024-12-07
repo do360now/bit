@@ -4,10 +4,18 @@ services:
   #   container_name: kraken-trading-ai-bot
   #   command: python main.py  # Replace with your app's entry point
 
-  trading-bot-b:
+  btc-trading-agent:
     image: kraken-btc-trading-agent:1.0.0  # Replace with the correct image tag
     container_name: kraken-btc-trading-agent
     # depends_on:
     #   - trading-bot-a
     # entrypoint: ["sh", "-c", "sleep 180 && python main.py"]  # 3 minute delay (180 seconds)
     command: python main.py  # Replace with your app's entry point
+
+  eth-trading-agent:
+    image: kraken-eth-trading-agent:1.0.0  # Replace with the correct image tag
+    container_name: kraken-eth-trading-agent
+    depends_on:
+      - btc-trading-agent
+    entrypoint: ["sh", "-c", "sleep 180 && python main.py"]  # 3 minute delay (180 seconds)
+    # command: python main.py  # Replace with your app's entry point
