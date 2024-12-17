@@ -1,12 +1,19 @@
 services:
-  trading-bot-a:
-    image: kraken-trading-ai-bot:0.1.5  # Use the pre-built image
-    container_name: kraken-trading-ai-bot
+  btc-trading-bot:
+    image: btc-trading-bot:0.1.5  # Use the pre-built image
+    container_name: btc-trading-bot
     command: python main.py  # Replace with your app's entry point
 
-  trading-bot-b:
-    image: kraken-trading-claude-bot:0.1.5  # Replace with the correct image tag
-    container_name: kraken-trading-claude-bot
+  eth-trading-bot:
+    image: eth-trading-bot:0.1.5  # Replace with the correct image tag
+    container_name: eth-trading-bot
     depends_on:
-      - trading-bot-a
-    entrypoint: ["sh", "-c", "sleep 180 && python main.py"]  # 3 minute delay (180 seconds)
+      - btc-trading-bot
+    entrypoint: ["sh", "-c", "sleep 60 && python main.py"]  # 1 minute delay before starting the eth-trading-bot
+
+  xrp-trading-bot:
+    image: xrp-trading-bot:0.1.5  # Replace with the correct image tag
+    container_name: xrp-trading-bot
+    depends_on:
+      - eth-trading-bot
+    entrypoint: ["sh", "-c", "sleep 120 && python main.py"]  # 2 minute delay before starting the xrp-trading-bot

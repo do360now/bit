@@ -11,8 +11,12 @@ run_bit:
 	@python3 ./Bit/main.py >> trading.log 2>&1 &
 
 docker_build:
-	@echo "Building docker image..."
-	@docker build -t kraken-trading-ai-bot:0.1.5 .
+	@echo "Building btc docker image..."
+	@docker build -t btc-trading-bot:0.1.5 .
+	@echo "Building eth docker image..."
+	@docker build -t eth-trading-bot:0.1.5 ./ETH/.
+	@echo "Building xrp docker image..."
+	@docker build -t xrp-trading-bot:0.1.5 ./XRP/.
 
 deployment: docker_build
 	@echo "Deploying agents..."
