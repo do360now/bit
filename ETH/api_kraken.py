@@ -54,6 +54,7 @@ class KrakenAPI:
                 logger.error(f"API error: {api_reply['error']}")
                 return None
             return api_reply.get('result', None)
+            
         
         except requests.RequestException as error:
             # Log any request exceptions

@@ -23,10 +23,11 @@ ALLOCATIONS = {
 }
 
 # Initial ETH balance
-TOTAL_ETH = float(os.getenv("TOTAL_ETH", 0.1658813603))
+TOTAL_ETH = float(os.getenv("TOTAL_ETH"))
+
 
 # Minimum trading volume to avoid very small trades
-MIN_TRADE_VOLUME = float(os.getenv("MIN_TRADE_VOLUME", 0.0001))
+MIN_TRADE_VOLUME = float(os.getenv("MIN_TRADE_VOLUME"))
 
 # Cooldown period in seconds between trades
-GLOBAL_TRADE_COOLDOWN = int(os.getenv("GLOBAL_TRADE_COOLDOWN", 300))  # 5 minutes
+GLOBAL_TRADE_COOLDOWN = int(os.getenv("GLOBAL_TRADE_COOLDOWN"))  # 5 minutes

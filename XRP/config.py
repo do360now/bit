@@ -23,10 +23,11 @@ ALLOCATIONS = {
 }
 
 # Initial XRP balance
-TOTAL_XRP = float(os.getenv("TOTAL_XRP", 10.23167016))
+TOTAL_XRP = float(os.getenv("TOTAL_XRP"))
+
 
 # Minimum trading volume to avoid very small trades
-MIN_TRADE_VOLUME = float(os.getenv("MIN_TRADE_VOLUME", 1))
+MIN_TRADE_VOLUME = float(os.getenv("MIN_TRADE_VOLUME"))
 
 # Cooldown period in seconds between trades
-GLOBAL_TRADE_COOLDOWN = int(os.getenv("GLOBAL_TRADE_COOLDOWN", 300))  # 5 minutes
+GLOBAL_TRADE_COOLDOWN = int(os.getenv("GLOBAL_TRADE_COOLDOWN"))  # 5 minutes
