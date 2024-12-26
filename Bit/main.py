@@ -1,6 +1,5 @@
 import time
 from trading import trading_strategy
-# from trading_refactored import trading_strategy
 from portfolio import rebalance_portfolio
 from api_kraken import KrakenAPI
 from logger_config import logger

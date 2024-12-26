@@ -68,7 +68,7 @@ class KrakenAPI:
             return result.get('XXRPZUSD', None)
         return None
 
-    def get_optimal_price(self, order_book: Dict, side: str, buffer: float = 0.2) -> Optional[float]:
+    def get_optimal_price(self, order_book: Dict, side: str, buffer: float = 0.025) -> Optional[float]:
         """Calculates an optimal price for buying or selling based on order book."""
         if side == "buy":
             best_ask = float(order_book['asks'][0][0])

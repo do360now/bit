@@ -17,9 +17,9 @@ API_DOMAIN = os.getenv("API_DOMAIN", "https://api.kraken.com")
 
 # Allocation strategy for portfolio management
 ALLOCATIONS = {
-    'HODL': float(os.getenv("ALLOC_HODL", 0.85)),
-    'YIELD': float(os.getenv("ALLOC_YIELD", 0.0)),
-    'TRADING': float(os.getenv("ALLOC_TRADING", 0.15)),
+    'HODL': float(os.getenv("ALLOC_HODL")),
+    'YIELD': float(os.getenv("ALLOC_YIELD")),
+    'TRADING': float(os.getenv("ALLOC_TRADING")),
 }
 
 # Initial ETH balance
