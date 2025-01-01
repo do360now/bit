@@ -122,11 +122,14 @@ class KrakenAPI:
         result = self._make_request(method="Ticker", path="/0/public/", data={"pair": pair})
         if result:
             try:
-                volume = float(result[pair]['v'][1])  # 'v' represents the volume, and index [1] is the 24-hour volume
-                return volume
-            except (KeyError, ValueError) as e:
+                volume_data = result[pair].get('v', [])
+                if len(volume_data) > 1:
+                    return float(volume_data[1])  # 'v[1]' is the 24-hour volume
+                else:
+                    logger.error("Volume data is incomplete.")
+            except (KeyError, ValueError, IndexError) as e:
                 logger.error(f"Error retrieving market volume: {e}")
-                return None
         return None
+
 
 

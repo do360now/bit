@@ -7,3 +7,5 @@ tenacity
 numpy
 termcolor
 nltk
+requests
+pytest
